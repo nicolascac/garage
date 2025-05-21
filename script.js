@@ -697,12 +697,14 @@ async function buscarEExibirDetalhesAPI(veiculoId) {
 
 
 // ======================================================================================
-// == INÍCIO ATIVIDADE B2.P1.A3 & B2.P1.A4: Previsão do Tempo Interativa ===============
+// == INÍCIO ATIVIDADE B2.P1.A5: A Ponte para o Backend ================================
+// == Modificações na busca da previsão do tempo para usar o backend como proxy. ========
 // ======================================================================================
 
-const OPENWEATHER_API_KEY = "14e1f930677171133a7e7d358a47fbbd"; // <-- SUBSTITUA AQUI!!!
+// A constante OPENWEATHER_API_KEY que estava aqui foi REMOVIDA.
+// A chave agora está segura no backend (server.js, carregada do .env).
 
-// Estado da previsão e filtros
+// Estado da previsão e filtros (sem alteração aqui)
 let ultimaPrevisaoCompletaProcessada = null;
 let nomeCidadeAtualPrevisao = "";
 let filtroDiasAtivo = 5;
@@ -716,59 +718,57 @@ let configDestaque = {
 };
 
 /**
- * Faz a chamada à API OpenWeatherMap para buscar a previsão detalhada.
+ * Faz a chamada ao NOSSO BACKEND para buscar a previsão detalhada.
+ * O backend, por sua vez, chamará a API OpenWeatherMap.
  * @async
  * @param {string} cidade - O nome da cidade para buscar a previsão.
- * @returns {Promise<object>} Uma promessa que resolve com o objeto de dados completo da API.
- * @throws {Error} Lança um erro se a chave da API não estiver configurada, ou se ocorrer um erro na chamada da API.
+ * @returns {Promise<object>} Uma promessa que resolve com o objeto de dados completo da API OpenWeatherMap (repassado pelo nosso backend).
+ * @throws {Error} Lança um erro se ocorrer um erro na chamada ao nosso backend ou se o backend retornar um erro.
  */
-async function fetchPrevisaoDaAPI(cidade) { // Renomeado para clareza da ação (FETCH da API)
-    if (!OPENWEATHER_API_KEY || OPENWEATHER_API_KEY === "SUA_CHAVE_OPENWEATHERMAP_AQUI" || OPENWEATHER_API_KEY === "COLOQUE_SUA_CHAVE_REAL_AQUI") {
-        console.error("ERRO DE CONFIGURAÇÃO: A chave da API OpenWeatherMap não foi definida ou ainda é o valor padrão.");
-        throw new Error("CONFIGURAÇÃO NECESSÁRIA: A chave da API OpenWeatherMap não foi definida. " +
-                        "Por favor, edite o arquivo 'script.js' e insira SUA CHAVE PESSOAL E VÁLIDA na constante 'OPENWEATHER_API_KEY'. " +
-                        "Você pode obter uma chave gratuita em https://openweathermap.org/appid. " +
-                        "Se você já inseriu sua chave, verifique se ela está correta, ativa e se o plano da sua conta OpenWeatherMap permite acesso a este endpoint de previsão.");
-    }
-
-    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(cidade)}&appid=${OPENWEATHER_API_KEY}&units=metric&lang=pt_br`;
+async function fetchPrevisaoDaAPI(cidade) {
+    // A URL agora aponta para o seu servidor backend
+    // ATENÇÃO à porta! Deve ser a porta do seu server.js (ex: 3001)
+    const backendUrl = `http://localhost:3001/api/previsao/${encodeURIComponent(cidade)}`;
+    console.log(`[Frontend] Chamando backend em: ${backendUrl}`);
 
     try {
-        const response = await fetch(url);
-        const data = await response.json();
+        const response = await fetch(backendUrl);
+        
+        // Tenta pegar a mensagem de erro do JSON, mesmo se !response.ok
+        const data = await response.json().catch(() => ({})); 
 
-        if (!response.ok || data.cod !== "200" || !data.list || !Array.isArray(data.list)) {
-            console.error("Erro da API OpenWeatherMap ou dados inesperados:", data);
-            let mensagemErroApi = `Erro ao buscar previsão. `;
-            
-            if (data.message) {
-                mensagemErroApi += `Mensagem da API: ${data.message}`;
-            } else if (data.cod && data.cod !== "200") {
-                mensagemErroApi += `A API retornou um código de erro interno: ${data.cod}.`;
-            } else if (!response.ok) {
-                mensagemErroApi += `Erro HTTP ${response.status} ${response.statusText}.`;
-            } else {
-                mensagemErroApi += `A resposta da API foi bem-sucedida, mas a estrutura dos dados não contém a lista de previsões esperada ('list').`;
-            }
-
-            if (response.status === 401) {
-                mensagemErroApi = `Chave de API inválida ou não autorizada (Erro 401). Verifique sua chave. Detalhe: ${data.message || ''}`;
-            } else if (response.status === 404) {
-                mensagemErroApi = `Cidade não encontrada (Erro 404). Verifique o nome da cidade. Detalhe: ${data.message || ''}`;
-            }
-            
-            throw new Error(mensagemErroApi);
+        if (!response.ok) {
+            // data.error é a mensagem que nosso backend envia no JSON de erro
+            const erroMsg = data.error || `Erro ${response.status} ao buscar previsão no servidor.`;
+            console.error(`[Frontend] Erro do backend: ${response.status} - ${erroMsg}`, data);
+            throw new Error(erroMsg);
         }
-        return data;
+        
+        // Verifica se a estrutura dos dados recebidos do backend é a esperada (igual à da OpenWeatherMap)
+        if (data.cod !== "200" || !data.list || !Array.isArray(data.list)) {
+             console.error("[Frontend] Resposta do backend bem-sucedida, mas dados da OpenWeatherMap parecem inválidos ou incompletos:", data);
+             let erroEstrutura = `Resposta do backend recebida, mas os dados da previsão parecem incompletos.`;
+             if (data.message) erroEstrutura += ` Mensagem da API (via backend): ${data.message}`;
+             else if (data.cod && data.cod !== "200") erroEstrutura += ` A API (via backend) retornou um código de erro: ${data.cod}.`;
+             else if (!data.list) erroEstrutura += ` A lista de previsões ('list') não foi encontrada na resposta.`;
+
+             throw new Error(erroEstrutura);
+        }
+        console.log("[Frontend] Dados da previsão recebidos do backend:", data);
+        return data; // Retorna os dados da OpenWeatherMap repassados pelo backend
 
     } catch (error) {
-        console.error("Falha na chamada à API OpenWeatherMap ou ao processar a resposta:", error.message);
-        throw error;
+        // Erros podem ser de rede (fetch falhou) ou o 'throw new Error' de cima.
+        console.error("[Frontend] Falha ao buscar previsão via backend:", error.message);
+        // Re-lança o erro para ser pego pelo event listener do botão
+        throw error; 
     }
 }
 
 /**
  * Processa os dados brutos da API de forecast (5 dias / 3 horas) e os agrupa por dia.
+ * (Esta função permanece a mesma, pois ela processa os dados *da OpenWeatherMap*,
+ * que nosso backend agora está apenas repassando).
  * @param {object} dataApi - O objeto JSON completo retornado pela API OpenWeatherMap Forecast.
  * @returns {Array<object>|null} Um array de objetos com a previsão processada para cada dia.
  */
@@ -830,11 +830,12 @@ function processarDadosForecast(dataApi) {
 
 /**
  * Exibe a previsão do tempo detalhada na UI.
+ * (Esta função permanece a mesma).
  * @param {Array<object>} previsaoDiariaFiltrada - Array de objetos com a previsão já filtrada por dias.
  * @param {string} nomeCidade - O nome da cidade para exibição no título.
  * @param {object} destaquesAtivos - Configuração dos destaques {chuva: boolean, tempBaixa: boolean, tempAlta: boolean}.
  */
-function exibirPrevisaoNaTela(previsaoDiariaFiltrada, nomeCidade, destaquesAtivos) { // Renomeada para clareza da ação (EXIBIR na tela)
+function exibirPrevisaoNaTela(previsaoDiariaFiltrada, nomeCidade, destaquesAtivos) { 
     const resultadoClimaDiv = document.getElementById('previsao-tempo-resultado');
     const controlsDiv = document.getElementById('forecast-interaction-controls');
     if (!resultadoClimaDiv || !controlsDiv) {
@@ -847,7 +848,6 @@ function exibirPrevisaoNaTela(previsaoDiariaFiltrada, nomeCidade, destaquesAtivo
     if (!previsaoDiariaFiltrada || previsaoDiariaFiltrada.length === 0) {
         resultadoClimaDiv.innerHTML = `<p class="feedback-clima error"><i class="fas fa-exclamation-triangle"></i> Não há previsão para exibir com os filtros atuais para ${nomeCidade}.</p>`;
         resultadoClimaDiv.style.display = 'block';
-        // Mostra controles se já houve uma busca anterior bem-sucedida, mesmo que o filtro atual não retorne nada
         controlsDiv.style.display = ultimaPrevisaoCompletaProcessada ? 'flex' : 'none';
         return;
     }
@@ -888,9 +888,10 @@ function exibirPrevisaoNaTela(previsaoDiariaFiltrada, nomeCidade, destaquesAtivo
 
 /**
  * Orquestra a re-renderização da previsão com base nos filtros e destaques atuais.
+ * (Esta função permanece a mesma).
  */
 function renderizarPrevisaoComFiltrosAplicados() {
-    const resultadoClimaDiv = document.getElementById('previsao-tempo-resultado'); // Para mensagens
+    const resultadoClimaDiv = document.getElementById('previsao-tempo-resultado');
     const controlsDiv = document.getElementById('forecast-interaction-controls');
 
     if (!ultimaPrevisaoCompletaProcessada) {
@@ -902,17 +903,17 @@ function renderizarPrevisaoComFiltrosAplicados() {
         return;
     }
 
-    let previsaoFiltrada = [...ultimaPrevisaoCompletaProcessada]; // Começa com a previsão completa processada
+    let previsaoFiltrada = [...ultimaPrevisaoCompletaProcessada]; 
 
     if (filtroDiasAtivo === 1) previsaoFiltrada = previsaoFiltrada.slice(0, 1);
     else if (filtroDiasAtivo === 3) previsaoFiltrada = previsaoFiltrada.slice(0, 3);
-    // Para 5 dias, já usamos a lista completa (que já foi fatiada para 5 dias em processarDadosForecast)
-
+    
     exibirPrevisaoNaTela(previsaoFiltrada, nomeCidadeAtualPrevisao, configDestaque);
 }
 
 
 // Event Listener para o botão de verificar clima
+// (A lógica interna do try/catch será a mesma, mas agora `fetchPrevisaoDaAPI` chama o backend)
 const btnVerificarClima = document.getElementById('verificar-clima-btn');
 const inputDestino = document.getElementById('destino-viagem');
 const resultadoClimaDivEl = document.getElementById('previsao-tempo-resultado');
@@ -921,11 +922,10 @@ const forecastControlsDiv = document.getElementById('forecast-interaction-contro
 if (btnVerificarClima && inputDestino && resultadoClimaDivEl) {
     btnVerificarClima.addEventListener('click', async () => {
         const cidade = inputDestino.value.trim();
-        // Garantir que o nome da cidade e a previsão anterior são resetados em uma nova busca
         nomeCidadeAtualPrevisao = ""; 
         ultimaPrevisaoCompletaProcessada = null;
         
-        if (forecastControlsDiv) forecastControlsDiv.style.display = 'none'; // Esconde controles antes da nova busca
+        if (forecastControlsDiv) forecastControlsDiv.style.display = 'none';
 
 
         if (!cidade) {
@@ -940,32 +940,34 @@ if (btnVerificarClima && inputDestino && resultadoClimaDivEl) {
         resultadoClimaDivEl.innerHTML = `<p class="feedback-clima loading"><i class="fas fa-spinner fa-spin"></i> Buscando previsão detalhada para ${cidade}...</p>`;
 
         try {
-            const dadosApiCompletos = await fetchPrevisaoDaAPI(cidade); // CHAMADA CORRIGIDA AQUI
+            // AGORA CHAMA A FUNÇÃO MODIFICADA QUE USA O BACKEND
+            const dadosApiCompletos = await fetchPrevisaoDaAPI(cidade); 
             
             nomeCidadeAtualPrevisao = (dadosApiCompletos.city && dadosApiCompletos.city.name) ? dadosApiCompletos.city.name : cidade;
             
             ultimaPrevisaoCompletaProcessada = processarDadosForecast(dadosApiCompletos);
             
             if (ultimaPrevisaoCompletaProcessada && ultimaPrevisaoCompletaProcessada.length > 0) {
-                renderizarPrevisaoComFiltrosAplicados(); // Isso chamará exibirPrevisaoNaTela com os dados corretos
+                renderizarPrevisaoComFiltrosAplicados(); 
             } else {
                 let msgErroProcessamento = `Não foi possível processar os dados da previsão para ${nomeCidadeAtualPrevisao}.`;
                 if (dadosApiCompletos && dadosApiCompletos.list && dadosApiCompletos.list.length === 0) {
-                    msgErroProcessamento += ` A API retornou uma lista de previsões vazia.`;
+                    msgErroProcessamento += ` A API (via backend) retornou uma lista de previsões vazia.`;
                 } else {
                     msgErroProcessamento += ` Verifique o console para mais detalhes sobre o processamento.`;
                 }
-                console.log("Dados completos recebidos da API que podem ter causado falha no processamento:", dadosApiCompletos);
+                console.log("[Frontend] Dados completos recebidos do backend que podem ter causado falha no processamento:", dadosApiCompletos);
                 resultadoClimaDivEl.innerHTML = `<p class="feedback-clima error"><i class="fas fa-info-circle"></i> ${msgErroProcessamento}</p>`;
             }
         } catch (error) {
-            console.error("Erro final ao buscar/exibir previsão detalhada:", error);
-            resultadoClimaDivEl.innerHTML = `<p class="feedback-clima error"><i class="fas fa-times-circle"></i> ${error.message}</p>`;
+            // O erro já foi logado em fetchPrevisaoDaAPI, aqui apenas exibimos na UI.
+            console.error("[Frontend] Erro final ao buscar/exibir previsão detalhada (via backend):", error);
+            resultadoClimaDivEl.innerHTML = `<p class="feedback-clima error"><i class="fas fa-times-circle"></i> Falha: ${error.message}</p>`;
         }
     });
 }
 
-// Event Listeners para os controles de filtro e destaque (permanecem os mesmos, pois chamam renderizarPrevisaoComFiltrosAplicados)
+// Event Listeners para os controles de filtro e destaque (permanecem os mesmos)
 const diasFilterOptions = document.getElementById('dias-filter-options');
 if (diasFilterOptions) {
     diasFilterOptions.addEventListener('click', (event) => {
@@ -991,7 +993,7 @@ if (highlightFilterOptions) {
     });
 }
 // ======================================================================================
-// == FIM ATIVIDADE B2.P1.A3 & B2.P1.A4 ================================================
+// == FIM ATIVIDADE B2.P1.A5 ===========================================================
 // ======================================================================================
 
 
@@ -1014,5 +1016,5 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialForecastControls = document.getElementById('forecast-interaction-controls');
     if(initialForecastControls) initialForecastControls.style.display = 'none';
 
-    console.log("Garagem Inteligente Conectada inicializada com interatividade na previsão do tempo.");
+    console.log("Garagem Inteligente Conectada inicializada com interatividade na previsão do tempo (com backend proxy).");
 });

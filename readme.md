@@ -119,3 +119,4 @@ Esta funcionalidade foi aprimorada para buscar uma previsão do tempo detalhada 
 *   Clique no botão "Verificar Clima".
 *   A previsão do tempo para os próximos dias para a cidade será exibida (ou uma mensagem de erro se a cidade não for encontrada, a chave for inválida, etc.). A previsão inclui temperatura mínima e máxima, uma descrição geral e um ícone para cada dia.
 *   Endpoint Utilizado: `https://api.openweathermap.org/data/2.5/forecast` com os parâmetros `q` (cidade), `appid` (sua chave), `units=metric` (Celsius) e `lang=pt_br` (português do Brasil).
+
