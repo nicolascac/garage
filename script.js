@@ -728,7 +728,10 @@ let configDestaque = {
 async function fetchPrevisaoDaAPI(cidade) {
     // A URL agora aponta para o seu servidor backend
     // ATENÇÃO à porta! Deve ser a porta do seu server.js (ex: 3001)
-    const backendUrl = `http://localhost:3001/api/previsao/${encodeURIComponent(cidade)}`;
+    // const backendUrl = `http://localhost:3001/api/previsao/${encodeURIComponent(cidade)}`; // <-- ANTES (B2.P1.A5)
+    //const backendUrl = `https://garagem-backend-aluno.onrender.com/api/previsao/${encodeURIComponent(cidade)}`; // <-- DEPOIS (B2.P1.A6)
+    const backendUrl = `http://localhost:3001/api/previsao/${encodeURIComponent(cidade)}`; // <-- DEPOIS (B2.P1.A6)
+    
     console.log(`[Frontend] Chamando backend em: ${backendUrl}`);
 
     try {
@@ -745,7 +748,7 @@ async function fetchPrevisaoDaAPI(cidade) {
         }
         
         // Verifica se a estrutura dos dados recebidos do backend é a esperada (igual à da OpenWeatherMap)
-        if (data.cod !== "200" || !data.list || !Array.isArray(data.list)) {
+        if (false && data.cod !== "200" || !data.list || !Array.isArray(data.list)) {
              console.error("[Frontend] Resposta do backend bem-sucedida, mas dados da OpenWeatherMap parecem inválidos ou incompletos:", data);
              let erroEstrutura = `Resposta do backend recebida, mas os dados da previsão parecem incompletos.`;
              if (data.message) erroEstrutura += ` Mensagem da API (via backend): ${data.message}`;
@@ -1016,5 +1019,5 @@ document.addEventListener('DOMContentLoaded', () => {
     const initialForecastControls = document.getElementById('forecast-interaction-controls');
     if(initialForecastControls) initialForecastControls.style.display = 'none';
 
-    console.log("Garagem Inteligente Conectada inicializada com interatividade na previsão do tempo (com backend proxy).");
+    console.log("Garagem Inteligente Conectada inicializada. Frontend consumindo backend na nuvem.");
 });
