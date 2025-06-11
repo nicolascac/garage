@@ -1,38 +1,50 @@
-// server.js
+// server.js (VERSÃO CORRETA E FINAL)
 
 import express from 'express';
-// dotenv e axios não são necessários para este teste simples
-// import dotenv from 'dotenv';
-// import axios from 'axios';
+import dotenv from 'dotenv';
+import axios from 'axios';
+import cors from 'cors';
 
-// dotenv.config(); // Não necessário para este teste
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
-// const apiKey = process.env.OPENWEATHER_API_KEY; // Não necessário para este teste
+const apiKey = process.env.OPENWEATHER_API_KEY;
 
-// Middleware CORS (Mantenha este!)
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    next();
+app.use(cors());
+
+// --- ROTAS DE DICAS ---
+const dicasManutencaoGerais = [ { id: 1, dica: "Verifique o nível do óleo." }, { id: 2, dica: "Calibre os pneus." } ];
+const dicasPorTipo = { carro: [{ id: 101, dica: "Faça o rodízio dos pneus." }], moto: [{ id: 201, dica: "Lubrifique a corrente." }] };
+app.get('/api/dicas-manutencao', (req, res) => res.json(dicasManutencaoGerais));
+app.get('/api/dicas-manutencao/:tipoVeiculo', (req, res) => {
+    const dicas = dicasPorTipo[req.params.tipoVeiculo.toLowerCase()];
+    if (dicas) res.json(dicas);
+    else res.status(404).json({ error: `Nenhuma dica para ${req.params.tipoVeiculo}` });
 });
 
-// ROTA DE TESTE SIMPLIFICADA
-app.get('/api/previsao/:cidade', (req, res) => {
+// --- ROTA DE PREVISÃO DO TEMPO (FUNCIONAL) ---
+app.get('/api/previsao/:cidade', async (req, res) => {
     const { cidade } = req.params;
-    console.log(`[Servidor Render Teste] Rota /api/previsao/:cidade acessada para: ${cidade}`);
-    res.status(200).json({
-        message: `Backend no Render respondeu para cidade: ${cidade}`,
-        sucesso: true
-    });
+   
+    if (!apiKey) {
+        return res.status(500).json({ error: 'Chave da API não configurada no servidor.' });
+    }
+    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${cidade}&appid=${apiKey}&units=metric&lang=pt_br`;
+    try {
+        console.log(`[Backend] Buscando previsão para ${cidade}...`);
+        const response = await axios.get(url);
+        res.json(response.data); // Resposta real do OpenWeatherMap
+    } catch (error) {
+        console.error("[Backend] Erro:", error.response?.data || error.message);
+        res.status(error.response?.status || 500).json({
+            error: `Erro ao buscar previsão para '${cidade}'.`,
+            detalhes: error.response?.data?.message || 'Erro interno do servidor.'
+        });
+    }
 });
 
-// Rota raiz para verificar se o servidor está no ar
-app.get('/', (req, res) => {
-    res.send('Servidor Backend da Garagem Inteligente (VERSÃO DE TESTE SIMPLES) está funcionando!');
-});
+// --- ROTA RAIZ ---
+app.get('/', (req, res) => res.send('Servidor Backend da Garagem Inteligente está funcionando!'));
 
-app.listen(port, () => {
-    console.log(`Servidor backend (VERSÃO DE TESTE SIMPLES) rodando em http://localhost:${port}`);
-});
+app.listen(port, () => console.log(`Servidor rodando na porta ${port}`));

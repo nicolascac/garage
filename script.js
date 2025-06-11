@@ -54,7 +54,7 @@ class Manutencao {
     }
 }
 
-// --- Classes de Veículos (Sem alterações significativas na estrutura base) ---
+// --- Classes de Veículos (Sem alterações) ---
 class Veiculo {
     constructor(modelo, cor, id = null, tipoVeiculo = 'Veiculo') {
         this.id = id || `veh-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 9)}`;
@@ -97,7 +97,6 @@ class Veiculo {
         this.velocidade += incremento;
         exibirNotificacao(`${this.modelo} acelerou para ${this.velocidade} km/h.`, 'info');
         if (typeof atualizarInfoVeiculoNoModal === 'function') atualizarInfoVeiculoNoModal(this.id);
-        // salvarGaragem(); // Opcional
     }
 
     buzinar() {
@@ -304,7 +303,7 @@ class Caminhao extends Veiculo {
     toJSON() { const json = super.toJSON(); json.capacidadeCarga = this.capacidadeCarga; json.cargaAtual = this.cargaAtual; return json; }
 }
 
-// --- Gerenciamento da Garagem e LocalStorage (Sem alterações) ---
+// --- Gerenciamento da Garagem e LocalStorage ---
 let garagem = [];
 const STORAGE_KEY = 'minhaGaragemInteligente_v2';
 
@@ -340,7 +339,6 @@ function carregarGaragem() {
 }
 
 // --- Funções de Renderização da UI ---
-
 function renderizarGaragem() {
     const listaVeiculosDiv = document.getElementById('listaVeiculos');
     if (!listaVeiculosDiv) return; 
@@ -368,11 +366,7 @@ function renderizarGaragem() {
 function renderizarHistoricoManutencaoModal(veiculoId) {
     const veiculo = garagem.find(v => v.id === veiculoId);
     const historicoDiv = document.getElementById('modalHistoricoManutencao');
-    if (!historicoDiv) return; 
-    if (!veiculo) {
-        console.error("Veículo não encontrado para renderizar histórico:", veiculoId);
-        historicoDiv.innerHTML = '<p>Erro: Veículo não encontrado.</p>'; return;
-    }
+    if (!historicoDiv || !veiculo) return; 
     historicoDiv.innerHTML = veiculo.getHistoricoHTML();
 }
 
@@ -406,19 +400,16 @@ function renderizarAgendamentosFuturos() {
 }
 
 // --- Funções do Modal e Ações do Veículo ---
-
 const modal = document.getElementById('modalDetalhesVeiculo');
 const modalContent = modal ? modal.querySelector('.modal-content') : null; 
 
 function abrirModalDetalhes(veiculoId) {
     if (!modal || !modalContent) return; 
-
     const veiculo = garagem.find(v => v.id === veiculoId);
     if (!veiculo) { exibirNotificacao("Erro: Veículo não encontrado.", "error"); return; }
 
     document.getElementById('modalTituloVeiculo').textContent = `Detalhes: ${veiculo.modelo} (${veiculo.cor})`;
     document.getElementById('manutencaoVeiculoId').value = veiculoId;
-
     atualizarInfoVeiculoNoModal(veiculoId);
     renderizarHistoricoManutencaoModal(veiculoId);
 
@@ -427,15 +418,13 @@ function abrirModalDetalhes(veiculoId) {
         detalhesApiContentDiv.innerHTML = '<p class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando detalhes extras...</p>';
         buscarEExibirDetalhesAPI(veiculoId);
     }
-
-
-    const formManutencaoEl = document.getElementById('formManutencao'); // Renomeado para evitar conflito
+    
+    const formManutencaoEl = document.getElementById('formManutencao');
     if (formManutencaoEl) formManutencaoEl.reset();
     if (typeof flatpickr === 'function') { 
         flatpickr("#manutencaoData", { enableTime: true, dateFormat: "Y-m-d H:i", locale: "pt" });
     }
-
-
+    
     modal.style.display = 'block';
     modalContent.classList.add('animate-in');
 }
@@ -453,7 +442,6 @@ if (modal) {
     window.onclick = function(event) { if (event.target == modal) { fecharModal(); } }
     window.addEventListener('keydown', function(event) { if (event.key === 'Escape' && modal.style.display === 'block') { fecharModal(); } });
 }
-
 
 function atualizarInfoVeiculoNoModal(veiculoId) {
     if (!modal || modal.style.display !== 'block' || !document.getElementById('manutencaoVeiculoId') || document.getElementById('manutencaoVeiculoId').value !== veiculoId) { return; }
@@ -492,13 +480,11 @@ function atualizarInfoVeiculoNoModal(veiculoId) {
 function executarAcaoVeiculo(veiculoId, acao, param = null) {
     const veiculo = garagem.find(v => v.id === veiculoId);
     if (!veiculo) { exibirNotificacao("Erro: Veículo não encontrado.", "error"); return; }
-
     if ((acao === 'carregar' || acao === 'descarregar') && veiculo instanceof Caminhao) {
         const inputPeso = document.getElementById(`pesoCargaModal_${veiculo.id}`);
         if (!inputPeso) { console.error("Input peso não encontrado no modal."); return; }
         param = inputPeso.value;
     }
-
     if (typeof veiculo[acao] === 'function') {
         try { veiculo[acao](param); }
         catch (error) {
@@ -547,14 +533,13 @@ if (tipoVeiculoSelect) {
         const campoCapacidadeDiv = document.getElementById('campoCapacidadeCarga');
         const capacidadeInput = document.getElementById('capacidadeCargaVeiculo');
         if (!campoCapacidadeDiv || !capacidadeInput) return;
-
         const show = (this.value === 'Caminhao');
         campoCapacidadeDiv.style.display = show ? 'block' : 'none';
         capacidadeInput.required = show; if (!show) { capacidadeInput.value = ''; }
     });
 }
 
-const formManutencaoElEvt = document.getElementById('formManutencao'); // Renomeado para evitar conflito
+const formManutencaoElEvt = document.getElementById('formManutencao');
 if (formManutencaoElEvt) {
     formManutencaoElEvt.addEventListener('submit', function(event) {
         event.preventDefault();
@@ -576,7 +561,6 @@ if (formManutencaoElEvt) {
         } catch (error) { console.error("Erro no form manutenção:", error); exibirNotificacao(`Erro: ${error.message}`, 'error'); }
     });
 }
-
 
 function removerVeiculo(veiculoId) {
     const veiculo = garagem.find(v => v.id === veiculoId); if (!veiculo) { exibirNotificacao("Erro: Veículo não encontrado.", "error"); return; }
@@ -615,7 +599,7 @@ function exibirNotificacao(mensagem, tipo = 'info', duracaoMs = 5000) {
 
 function verificarAgendamentosProximos() {
     const agora = new Date(); const amanha = new Date(agora); amanha.setDate(agora.getDate() + 1);
-    const limite = new Date(agora.getTime() + 2 * 24 * 60 * 60 * 1000); // Próximos 2 dias
+    const limite = new Date(agora.getTime() + 2 * 24 * 60 * 60 * 1000);
     let lembretes = [];
     garagem.forEach(veiculo => {
         veiculo.historicoManutencao.forEach(m => {
@@ -635,13 +619,6 @@ function verificarAgendamentosProximos() {
 // ======================================================
 // == INÍCIO PARTE 1: API SIMULADA - Detalhes Veículo ==
 // ======================================================
-
-/**
- * Busca detalhes extras de um veículo na API simulada (JSON local).
- * @async
- * @param {string} identificadorVeiculo - O ID único do veículo a ser buscado.
- * @returns {Promise<object|null>} Uma promessa que resolve com o objeto de dados do veículo ou null se não encontrado/erro.
- */
 async function buscarDetalhesVeiculoAPI(identificadorVeiculo) {
     const url = './dados_veiculos_api.json'; 
     try {
@@ -650,20 +627,14 @@ async function buscarDetalhesVeiculoAPI(identificadorVeiculo) {
             throw new Error(`Erro ao buscar dados da API simulada: ${response.status} ${response.statusText}`);
         }
         const dadosVeiculos = await response.json();
-        // O arquivo dados.json fornecido não usa "id", mas "id". Ajuste aqui se o nome do arquivo for 'dados.json' e o campo ID for outro
         const detalhes = dadosVeiculos.find(veiculo => veiculo.id === identificadorVeiculo); 
         return detalhes || null;
-
     } catch (error) {
         console.error("Falha ao buscar ou processar API simulada:", error);
         return null;
     }
 }
 
-/**
- * Função auxiliar para formatar e exibir os detalhes da API no modal.
- * @param {string} veiculoId - O ID do veículo cujos detalhes devem ser exibidos.
- */
 async function buscarEExibirDetalhesAPI(veiculoId) {
     const detalhesApiContentDiv = document.getElementById('detalhes-extras-api-content');
     if(!detalhesApiContentDiv) return; 
@@ -672,7 +643,6 @@ async function buscarEExibirDetalhesAPI(veiculoId) {
 
     try {
         const detalhes = await buscarDetalhesVeiculoAPI(veiculoId);
-
         if (detalhes) {
             detalhesApiContentDiv.innerHTML = `
                 <h4><i class="fas fa-database"></i> Dados da API Simulada:</h4>
@@ -690,19 +660,18 @@ async function buscarEExibirDetalhesAPI(veiculoId) {
         detalhesApiContentDiv.innerHTML = `<p class="error"><i class="fas fa-times-circle"></i> Erro ao carregar detalhes extras: ${error.message}</p>`;
     }
 }
-
 // ======================================================
 // == FIM PARTE 1 =======================================
 // ======================================================
 
 
 // ======================================================================================
-// == INÍCIO ATIVIDADE B2.P1.A5: A Ponte para o Backend ================================
-// == Modificações na busca da previsão do tempo para usar o backend como proxy. ========
+// == INÍCIO SEÇÃO DA API - CORRIGIDA ===================================================
 // ======================================================================================
 
-// A constante OPENWEATHER_API_KEY que estava aqui foi REMOVIDA.
-// A chave agora está segura no backend (server.js, carregada do .env).
+// *** PASSO 1: DEFINA A URL BASE DO SEU BACKEND AQUI EM CIMA ***
+// Use a URL do Render quando o backend estiver na nuvem.
+const backendUrl = "https://garage-2dux.onrender.com";
 
 // Estado da previsão e filtros (sem alteração aqui)
 let ultimaPrevisaoCompletaProcessada = null;
@@ -719,62 +688,37 @@ let configDestaque = {
 
 /**
  * Faz a chamada ao NOSSO BACKEND para buscar a previsão detalhada.
- * O backend, por sua vez, chamará a API OpenWeatherMap.
- * @async
- * @param {string} cidade - O nome da cidade para buscar a previsão.
- * @returns {Promise<object>} Uma promessa que resolve com o objeto de dados completo da API OpenWeatherMap (repassado pelo nosso backend).
- * @throws {Error} Lança um erro se ocorrer um erro na chamada ao nosso backend ou se o backend retornar um erro.
  */
 async function fetchPrevisaoDaAPI(cidade) {
-    // A URL agora aponta para o seu servidor backend
-    // ATENÇÃO à porta! Deve ser a porta do seu server.js (ex: 3001)
-    // const backendUrl = `http://localhost:3001/api/previsao/${encodeURIComponent(cidade)}`; // <-- ANTES (B2.P1.A5)
-    //const backendUrl = `https://garagem-backend-aluno.onrender.com/api/previsao/${encodeURIComponent(cidade)}`; // <-- DEPOIS (B2.P1.A6)
-    const backendUrl = `http://localhost:3001/api/previsao/${encodeURIComponent(cidade)}`; // <-- DEPOIS (B2.P1.A6)
+    // *** CONSTRÓI A URL COMPLETA USANDO A CONSTANTE E O CAMINHO CORRETO ***
+    const urlCompleta = `${backendUrl}/api/previsao/${encodeURIComponent(cidade)}`;
     
-    console.log(`[Frontend] Chamando backend em: ${backendUrl}`);
+    console.log(`[Frontend] Chamando backend em: ${urlCompleta}`);
 
     try {
-        const response = await fetch(backendUrl);
-        
-        // Tenta pegar a mensagem de erro do JSON, mesmo se !response.ok
+        const response = await fetch(urlCompleta);
         const data = await response.json().catch(() => ({})); 
 
         if (!response.ok) {
-            // data.error é a mensagem que nosso backend envia no JSON de erro
-            const erroMsg = data.error || `Erro ${response.status} ao buscar previsão no servidor.`;
-            console.error(`[Frontend] Erro do backend: ${response.status} - ${erroMsg}`, data);
+            const erroMsg = data.error || `Erro ${response.status} do servidor.`;
             throw new Error(erroMsg);
         }
         
-        // Verifica se a estrutura dos dados recebidos do backend é a esperada (igual à da OpenWeatherMap)
-        if (false && data.cod !== "200" || !data.list || !Array.isArray(data.list)) {
-             console.error("[Frontend] Resposta do backend bem-sucedida, mas dados da OpenWeatherMap parecem inválidos ou incompletos:", data);
-             let erroEstrutura = `Resposta do backend recebida, mas os dados da previsão parecem incompletos.`;
-             if (data.message) erroEstrutura += ` Mensagem da API (via backend): ${data.message}`;
-             else if (data.cod && data.cod !== "200") erroEstrutura += ` A API (via backend) retornou um código de erro: ${data.cod}.`;
-             else if (!data.list) erroEstrutura += ` A lista de previsões ('list') não foi encontrada na resposta.`;
-
-             throw new Error(erroEstrutura);
+        // Validação robusta da resposta
+        if (!data || !data.list || !Array.isArray(data.list)) {
+             console.error("[Frontend] Resposta inválida do backend:", data);
+             throw new Error("Dados da previsão recebidos estão incompletos.");
         }
-        console.log("[Frontend] Dados da previsão recebidos do backend:", data);
-        return data; // Retorna os dados da OpenWeatherMap repassados pelo backend
-
+        
+        return data; // Retorna os dados corretos
     } catch (error) {
-        // Erros podem ser de rede (fetch falhou) ou o 'throw new Error' de cima.
-        console.error("[Frontend] Falha ao buscar previsão via backend:", error.message);
-        // Re-lança o erro para ser pego pelo event listener do botão
+        console.error("[Frontend] Falha na comunicação com o backend:", error);
         throw error; 
     }
 }
 
-/**
- * Processa os dados brutos da API de forecast (5 dias / 3 horas) e os agrupa por dia.
- * (Esta função permanece a mesma, pois ela processa os dados *da OpenWeatherMap*,
- * que nosso backend agora está apenas repassando).
- * @param {object} dataApi - O objeto JSON completo retornado pela API OpenWeatherMap Forecast.
- * @returns {Array<object>|null} Um array de objetos com a previsão processada para cada dia.
- */
+// ... o resto das funções de previsão (processarDadosForecast, exibirPrevisaoNaTela, etc.) permanecem iguais ...
+
 function processarDadosForecast(dataApi) {
     if (!dataApi || !dataApi.list) {
         console.warn("processarDadosForecast: Chamado com 'dataApi' inválido ou sem 'dataApi.list'.");
@@ -784,7 +728,6 @@ function processarDadosForecast(dataApi) {
         console.warn("processarDadosForecast: 'dataApi.list' está vazio.", dataApi);
         return [];
     }
-
     const previsoesAgrupadas = {};
     dataApi.list.forEach((item, index) => {
         if (!item || typeof item.dt_txt !== 'string' || !item.main || typeof item.main.temp !== 'number' || !item.weather || !Array.isArray(item.weather) || item.weather.length === 0 || !item.weather[0] || typeof item.weather[0].description !== 'string' || typeof item.weather[0].icon !== 'string') {
@@ -824,54 +767,35 @@ function processarDadosForecast(dataApi) {
             temChuva: diaData.descricoesChuva.length > 0
         });
     }
-    if (Object.keys(previsoesAgrupadas).length > 0 && previsaoDiariaProcessada.length === 0 && dataApi.list.length > 0) {
-        console.warn("processarDadosForecast: Nenhum dia pôde ser completamente processado.", { apiListCount: dataApi.list.length, agrupados: previsoesAgrupadas });
-    }
     return previsaoDiariaProcessada.slice(0, 5);
 }
 
-
-/**
- * Exibe a previsão do tempo detalhada na UI.
- * (Esta função permanece a mesma).
- * @param {Array<object>} previsaoDiariaFiltrada - Array de objetos com a previsão já filtrada por dias.
- * @param {string} nomeCidade - O nome da cidade para exibição no título.
- * @param {object} destaquesAtivos - Configuração dos destaques {chuva: boolean, tempBaixa: boolean, tempAlta: boolean}.
- */
 function exibirPrevisaoNaTela(previsaoDiariaFiltrada, nomeCidade, destaquesAtivos) { 
     const resultadoClimaDiv = document.getElementById('previsao-tempo-resultado');
     const controlsDiv = document.getElementById('forecast-interaction-controls');
     if (!resultadoClimaDiv || !controlsDiv) {
-        console.error("Elementos de UI para previsão não encontrados (previsao-tempo-resultado ou forecast-interaction-controls).");
+        console.error("Elementos de UI para previsão não encontrados.");
         return;
     }
-    
     resultadoClimaDiv.innerHTML = ''; 
-
     if (!previsaoDiariaFiltrada || previsaoDiariaFiltrada.length === 0) {
-        resultadoClimaDiv.innerHTML = `<p class="feedback-clima error"><i class="fas fa-exclamation-triangle"></i> Não há previsão para exibir com os filtros atuais para ${nomeCidade}.</p>`;
+        resultadoClimaDiv.innerHTML = `<p class="feedback-clima error"><i class="fas fa-exclamation-triangle"></i> Não há previsão para exibir para ${nomeCidade}.</p>`;
         resultadoClimaDiv.style.display = 'block';
         controlsDiv.style.display = ultimaPrevisaoCompletaProcessada ? 'flex' : 'none';
         return;
     }
-
     controlsDiv.style.display = 'flex';
-
     const titulo = document.createElement('h4');
     titulo.innerHTML = `<i class="fas fa-calendar-alt"></i> Previsão para ${nomeCidade}`;
     resultadoClimaDiv.appendChild(titulo);
-
     const containerDias = document.createElement('div');
     containerDias.classList.add('forecast-container');
-
     previsaoDiariaFiltrada.forEach(dia => {
         const diaCard = document.createElement('div');
         diaCard.classList.add('forecast-day-card');
-
         if (destaquesAtivos.chuva && dia.temChuva) diaCard.classList.add('highlight-chuva');
         if (destaquesAtivos.tempBaixa && dia.temp_min < TEMPERATURA_BAIXA_LIMITE) diaCard.classList.add('highlight-temp-baixa');
         if (destaquesAtivos.tempAlta && dia.temp_max > TEMPERATURA_ALTA_LIMITE) diaCard.classList.add('highlight-temp-alta');
-
         const descricaoFormatada = dia.descricao.charAt(0).toUpperCase() + dia.descricao.slice(1);
         diaCard.innerHTML = `
             <p class="forecast-date"><strong>${dia.dataFormatada}</strong></p>
@@ -884,123 +808,72 @@ function exibirPrevisaoNaTela(previsaoDiariaFiltrada, nomeCidade, destaquesAtivo
         `;
         containerDias.appendChild(diaCard);
     });
-
     resultadoClimaDiv.appendChild(containerDias);
     resultadoClimaDiv.style.display = 'block';
 }
 
-/**
- * Orquestra a re-renderização da previsão com base nos filtros e destaques atuais.
- * (Esta função permanece a mesma).
- */
 function renderizarPrevisaoComFiltrosAplicados() {
     const resultadoClimaDiv = document.getElementById('previsao-tempo-resultado');
     const controlsDiv = document.getElementById('forecast-interaction-controls');
-
     if (!ultimaPrevisaoCompletaProcessada) {
         if (resultadoClimaDiv) {
-            resultadoClimaDiv.innerHTML = `<p class="feedback-clima info"><i class="fas fa-info-circle"></i> Busque por uma cidade para ver a previsão.</p>`;
+            resultadoClimaDiv.innerHTML = `<p class="feedback-clima info"><i class="fas fa-info-circle"></i> Busque por uma cidade.</p>`;
             resultadoClimaDiv.style.display = 'block';
         }
         if (controlsDiv) controlsDiv.style.display = 'none';
         return;
     }
-
     let previsaoFiltrada = [...ultimaPrevisaoCompletaProcessada]; 
-
     if (filtroDiasAtivo === 1) previsaoFiltrada = previsaoFiltrada.slice(0, 1);
     else if (filtroDiasAtivo === 3) previsaoFiltrada = previsaoFiltrada.slice(0, 3);
-    
     exibirPrevisaoNaTela(previsaoFiltrada, nomeCidadeAtualPrevisao, configDestaque);
 }
 
-
-// Event Listener para o botão de verificar clima
-// (A lógica interna do try/catch será a mesma, mas agora `fetchPrevisaoDaAPI` chama o backend)
-const btnVerificarClima = document.getElementById('verificar-clima-btn');
-const inputDestino = document.getElementById('destino-viagem');
-const resultadoClimaDivEl = document.getElementById('previsao-tempo-resultado');
-const forecastControlsDiv = document.getElementById('forecast-interaction-controls');
-
-if (btnVerificarClima && inputDestino && resultadoClimaDivEl) {
-    btnVerificarClima.addEventListener('click', async () => {
-        const cidade = inputDestino.value.trim();
-        nomeCidadeAtualPrevisao = ""; 
-        ultimaPrevisaoCompletaProcessada = null;
-        
-        if (forecastControlsDiv) forecastControlsDiv.style.display = 'none';
-
-
-        if (!cidade) {
-            exibirNotificacao("Por favor, digite o nome da cidade de destino.", 'warning');
-            resultadoClimaDivEl.style.display = 'block';
-            resultadoClimaDivEl.innerHTML = `<p class="feedback-clima error"><i class="fas fa-exclamation-triangle"></i> Digite uma cidade.</p>`;
-            inputDestino.focus();
-            return;
-        }
-
-        resultadoClimaDivEl.style.display = 'block';
-        resultadoClimaDivEl.innerHTML = `<p class="feedback-clima loading"><i class="fas fa-spinner fa-spin"></i> Buscando previsão detalhada para ${cidade}...</p>`;
-
-        try {
-            // AGORA CHAMA A FUNÇÃO MODIFICADA QUE USA O BACKEND
-            const dadosApiCompletos = await fetchPrevisaoDaAPI(cidade); 
-            
-            nomeCidadeAtualPrevisao = (dadosApiCompletos.city && dadosApiCompletos.city.name) ? dadosApiCompletos.city.name : cidade;
-            
-            ultimaPrevisaoCompletaProcessada = processarDadosForecast(dadosApiCompletos);
-            
-            if (ultimaPrevisaoCompletaProcessada && ultimaPrevisaoCompletaProcessada.length > 0) {
-                renderizarPrevisaoComFiltrosAplicados(); 
-            } else {
-                let msgErroProcessamento = `Não foi possível processar os dados da previsão para ${nomeCidadeAtualPrevisao}.`;
-                if (dadosApiCompletos && dadosApiCompletos.list && dadosApiCompletos.list.length === 0) {
-                    msgErroProcessamento += ` A API (via backend) retornou uma lista de previsões vazia.`;
-                } else {
-                    msgErroProcessamento += ` Verifique o console para mais detalhes sobre o processamento.`;
-                }
-                console.log("[Frontend] Dados completos recebidos do backend que podem ter causado falha no processamento:", dadosApiCompletos);
-                resultadoClimaDivEl.innerHTML = `<p class="feedback-clima error"><i class="fas fa-info-circle"></i> ${msgErroProcessamento}</p>`;
-            }
-        } catch (error) {
-            // O erro já foi logado em fetchPrevisaoDaAPI, aqui apenas exibimos na UI.
-            console.error("[Frontend] Erro final ao buscar/exibir previsão detalhada (via backend):", error);
-            resultadoClimaDivEl.innerHTML = `<p class="feedback-clima error"><i class="fas fa-times-circle"></i> Falha: ${error.message}</p>`;
-        }
-    });
-}
-
-// Event Listeners para os controles de filtro e destaque (permanecem os mesmos)
-const diasFilterOptions = document.getElementById('dias-filter-options');
-if (diasFilterOptions) {
-    diasFilterOptions.addEventListener('click', (event) => {
-        if (event.target.tagName === 'BUTTON') {
-            diasFilterOptions.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
-            event.target.classList.add('active');
-            filtroDiasAtivo = parseInt(event.target.dataset.dias);
-            renderizarPrevisaoComFiltrosAplicados();
-        }
-    });
-}
-
-const highlightFilterOptions = document.getElementById('highlight-filter-options');
-if (highlightFilterOptions) {
-    highlightFilterOptions.addEventListener('change', (event) => {
-        if (event.target.type === 'checkbox') {
-            const tipoDestaque = event.target.dataset.tipo;
-            if (tipoDestaque === 'chuva') configDestaque.chuva = event.target.checked;
-            else if (tipoDestaque === 'temp_baixa') configDestaque.tempBaixa = event.target.checked;
-            else if (tipoDestaque === 'temp_alta') configDestaque.tempAlta = event.target.checked;
-            renderizarPrevisaoComFiltrosAplicados();
-        }
-    });
-}
 // ======================================================================================
-// == FIM ATIVIDADE B2.P1.A5 ===========================================================
+// == INÍCIO ATIVIDADE B2.P1.A8: Backend Turbinado ======================================
 // ======================================================================================
+async function buscarDicasGerais() {
+    const resultadoDiv = document.getElementById('dicas-gerais-resultado');
+    resultadoDiv.style.display = 'block';
+    resultadoDiv.innerHTML = `<p class="loading"><i class="fas fa-spinner fa-spin"></i> Buscando dicas gerais...</p>`;
+    try {
+        const response = await fetch(`${backendUrl}/api/dicas-manutencao`);
+        if (!response.ok) throw new Error('Erro ao buscar dicas gerais do servidor.');
+        const dicas = await response.json();
+        exibirDicas(dicas, resultadoDiv, "Dicas de Manutenção Gerais");
+    } catch (error) {
+        console.error("Erro em buscarDicasGerais:", error);
+        resultadoDiv.innerHTML = `<p class="error"><i class="fas fa-times-circle"></i> Falha ao carregar dicas: ${error.message}</p>`;
+    }
+}
 
+async function buscarDicasEspecificas(tipoVeiculo) {
+    const resultadoDiv = document.getElementById('dicas-especificas-resultado');
+    resultadoDiv.style.display = 'block';
+    resultadoDiv.innerHTML = `<p class="loading"><i class="fas fa-spinner fa-spin"></i> Buscando dicas para ${tipoVeiculo}...</p>`;
+    try {
+        const response = await fetch(`${backendUrl}/api/dicas-manutencao/${encodeURIComponent(tipoVeiculo)}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || `Erro ${response.status} ao buscar dicas.`);
+        exibirDicas(data, resultadoDiv, `Dicas Específicas para ${tipoVeiculo}`);
+    } catch (error) {
+        console.error("Erro em buscarDicasEspecificas:", error);
+        resultadoDiv.innerHTML = `<p class="error"><i class="fas fa-times-circle"></i> Falha: ${error.message}</p>`;
+    }
+}
 
-// --- Inicialização da Aplicação ---
+function exibirDicas(dicas, container, titulo) {
+    if (!dicas || dicas.length === 0) {
+        container.innerHTML = `<p class="error">Nenhuma dica encontrada.</p>`;
+        return;
+    }
+    const listaHtml = dicas.map(item => `<li>${item.dica}</li>`).join('');
+    container.innerHTML = `<h4>${titulo}</h4><ul>${listaHtml}</ul>`;
+}
+
+// ======================================================
+// == INICIALIZAÇÃO E EVENT LISTENERS ===================
+// ======================================================
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof flatpickr === 'function' && flatpickr.l10ns && flatpickr.l10ns.pt) {
         flatpickr.localize(flatpickr.l10ns.pt);
@@ -1008,16 +881,86 @@ document.addEventListener('DOMContentLoaded', () => {
     
     carregarGaragem(); 
 
-    const tipoVeiculoSelectInit = document.getElementById('tipoVeiculo');
-    if (tipoVeiculoSelectInit && tipoVeiculoSelectInit.value === 'Caminhao') {
-        const campoCargaInit = document.getElementById('campoCapacidadeCarga');
-        const inputCargaInit = document.getElementById('capacidadeCargaVeiculo');
-        if (campoCargaInit) campoCargaInit.style.display = 'block';
-        if (inputCargaInit) inputCargaInit.required = true;
-    }
-    
     const initialForecastControls = document.getElementById('forecast-interaction-controls');
     if(initialForecastControls) initialForecastControls.style.display = 'none';
 
-    console.log("Garagem Inteligente Conectada inicializada. Frontend consumindo backend na nuvem.");
+    // Event Listeners para Previsão do Tempo
+    const btnVerificarClima = document.getElementById('verificar-clima-btn');
+    const inputDestino = document.getElementById('destino-viagem');
+    const resultadoClimaDivEl = document.getElementById('previsao-tempo-resultado');
+    if (btnVerificarClima && inputDestino && resultadoClimaDivEl) {
+        btnVerificarClima.addEventListener('click', async () => {
+            const cidade = inputDestino.value.trim();
+            nomeCidadeAtualPrevisao = ""; 
+            ultimaPrevisaoCompletaProcessada = null;
+            if (initialForecastControls) initialForecastControls.style.display = 'none';
+            if (!cidade) {
+                exibirNotificacao("Por favor, digite o nome da cidade.", 'warning');
+                resultadoClimaDivEl.style.display = 'block';
+                resultadoClimaDivEl.innerHTML = `<p class="feedback-clima error"><i class="fas fa-exclamation-triangle"></i> Digite uma cidade.</p>`;
+                return;
+            }
+            resultadoClimaDivEl.style.display = 'block';
+            resultadoClimaDivEl.innerHTML = `<p class="feedback-clima loading"><i class="fas fa-spinner fa-spin"></i> Buscando previsão para ${cidade}...</p>`;
+            try {
+                const dadosApiCompletos = await fetchPrevisaoDaAPI(cidade); 
+                nomeCidadeAtualPrevisao = dadosApiCompletos.city?.name || cidade;
+                ultimaPrevisaoCompletaProcessada = processarDadosForecast(dadosApiCompletos);
+                if (ultimaPrevisaoCompletaProcessada && ultimaPrevisaoCompletaProcessada.length > 0) {
+                    renderizarPrevisaoComFiltrosAplicados(); 
+                } else {
+                    resultadoClimaDivEl.innerHTML = `<p class="feedback-clima error"><i class="fas fa-info-circle"></i> Não foi possível processar os dados da previsão para ${nomeCidadeAtualPrevisao}.</p>`;
+                }
+            } catch (error) {
+                console.error("[Frontend] Erro final ao buscar/exibir previsão:", error);
+                resultadoClimaDivEl.innerHTML = `<p class="feedback-clima error"><i class="fas fa-times-circle"></i> Falha: ${error.message}</p>`;
+            }
+        });
+    }
+
+    const diasFilterOptions = document.getElementById('dias-filter-options');
+    if (diasFilterOptions) {
+        diasFilterOptions.addEventListener('click', (event) => {
+            if (event.target.tagName === 'BUTTON') {
+                diasFilterOptions.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+                event.target.classList.add('active');
+                filtroDiasAtivo = parseInt(event.target.dataset.dias);
+                renderizarPrevisaoComFiltrosAplicados();
+            }
+        });
+    }
+
+    const highlightFilterOptions = document.getElementById('highlight-filter-options');
+    if (highlightFilterOptions) {
+        highlightFilterOptions.addEventListener('change', (event) => {
+            if (event.target.type === 'checkbox') {
+                const tipoDestaque = event.target.dataset.tipo;
+                if (tipoDestaque === 'chuva') configDestaque.chuva = event.target.checked;
+                else if (tipoDestaque === 'temp_baixa') configDestaque.tempBaixa = event.target.checked;
+                else if (tipoDestaque === 'temp_alta') configDestaque.tempAlta = event.target.checked;
+                renderizarPrevisaoComFiltrosAplicados();
+            }
+        });
+    }
+
+    // Event Listeners para Dicas de Manutenção
+    const btnBuscarDicasGerais = document.getElementById('buscar-dicas-gerais-btn');
+    if (btnBuscarDicasGerais) {
+        btnBuscarDicasGerais.addEventListener('click', buscarDicasGerais);
+    }
+
+    const btnBuscarDicasEspecificas = document.getElementById('buscar-dicas-especificas-btn');
+    const inputTipoVeiculoDica = document.getElementById('tipo-veiculo-dica-input');
+    if (btnBuscarDicasEspecificas && inputTipoVeiculoDica) {
+        btnBuscarDicasEspecificas.addEventListener('click', () => {
+            const tipo = inputTipoVeiculoDica.value.trim();
+            if (tipo) {
+                buscarDicasEspecificas(tipo);
+            } else {
+                exibirNotificacao("Por favor, digite um tipo de veículo (ex: carro, moto).", 'warning');
+            }
+        });
+    }
+
+    console.log("Garagem Inteligente Conectada inicializada.");
 });
