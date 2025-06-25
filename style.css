@@ -695,3 +695,109 @@ label {
 .forecast-day-card.highlight-temp-alta .forecast-temp i.fa-temperature-high {
     margin-left: 4px; 
 }
+
+/* ... (todo o CSS existente) ... */
+
+/* ====================================================== */
+/* == INÍCIO: ESTILOS ARSENAL DE DADOS (ATIVIDADE B2.P1.A9) */
+/* ====================================================== */
+
+/* Container para os cards de destaque */
+.cards-container {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 15px;
+}
+
+/* Estilo individual de cada card de veículo */
+.veiculo-card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    overflow: hidden; /* Garante que a imagem com borda arredondada funcione */
+    width: 300px;
+    flex-shrink: 0;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.veiculo-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.veiculo-card-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover; /* Garante que a imagem cubra a área sem distorcer */
+    display: block;
+}
+
+.veiculo-card-body {
+    padding: 15px;
+}
+.veiculo-card-body h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #2c3e50;
+    font-size: 1.2em;
+}
+.veiculo-card-body p {
+    margin: 0;
+    font-size: 0.95em;
+    color: #555;
+    line-height: 1.5;
+}
+
+/* Estilos para a lista de serviços */
+#lista-servicos-oferecidos {
+    list-style: none;
+    padding: 0;
+    margin-top: 15px;
+}
+.servico-item {
+    background-color: #f9fafb;
+    border: 1px solid #eef2f7;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.servico-item strong {
+    font-size: 1.1em;
+    color: #3498db;
+}
+.servico-item span {
+    color: #555;
+}
+.servico-item em {
+    color: #16a085;
+    font-style: normal;
+    font-weight: bold;
+    align-self: flex-end;
+}
+
+/* Estilos para mensagens de loading e erro dentro das novas seções */
+.list-section .loading,
+.list-section .error {
+    font-style: italic;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 5px;
+    text-align: center;
+}
+.list-section .loading {
+    color: #007bff;
+    background-color: #e7f3ff;
+}
+.list-section .error {
+    color: #dc3545;
+    background-color: #f8d7da;
+    font-weight: bold;
+}
+
+/* ====================================================== */
+/* == FIM: ESTILOS ARSENAL DE DADOS ===================== */
+/* ====================================================== */

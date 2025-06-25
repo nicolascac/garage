@@ -671,7 +671,9 @@ async function buscarEExibirDetalhesAPI(veiculoId) {
 
 // *** PASSO 1: DEFINA A URL BASE DO SEU BACKEND AQUI EM CIMA ***
 // Use a URL do Render quando o backend estiver na nuvem.
-const backendUrl = "https://garage-2dux.onrender.com";
+//const backendUrl = "https://garage-2dux.onrender.com";
+const backendUrl = "http://localhost:3001";
+
 
 // Estado da previsão e filtros (sem alteração aqui)
 let ultimaPrevisaoCompletaProcessada = null;
@@ -698,6 +700,9 @@ async function fetchPrevisaoDaAPI(cidade) {
     try {
         const response = await fetch(urlCompleta);
         const data = await response.json().catch(() => ({})); 
+
+
+        console.log (data);
 
         if (!response.ok) {
             const erroMsg = data.error || `Erro ${response.status} do servidor.`;
@@ -963,4 +968,128 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     console.log("Garagem Inteligente Conectada inicializada.");
+
+  // ... (todo o código das classes Veiculo, Manutencao, etc. permanece igual aqui no topo) ...
+
+// ... (cole aqui todo o conteúdo do seu script.js até a parte das APIs) ...
+
+
+// ======================================================================================
+// == INÍCIO SEÇÃO DA API - VERSÃO FINAL REVISADA =======================================
+// ======================================================================================
+
+const backendUrl = "https://garage-2dux.onrender.com"; // VERIFIQUE ESTA URL!
+
+/**
+ * Função auxiliar para tratar erros de fetch, fornecendo mais detalhes no console.
+ */
+async function handleFetchError(response) {
+    const errorBodyText = await response.text().catch(() => "Não foi possível ler o corpo do erro.");
+    console.error(`====== ERRO DE FETCH ======`);
+    console.error(`URL: ${response.url}`);
+    console.error(`Status: ${response.status} (${response.statusText})`);
+    console.error(`Corpo da Resposta: ${errorBodyText}`);
+    console.error(`===========================`);
+
+    // Tenta extrair uma mensagem de erro JSON do nosso backend
+    try {
+        const errorJson = JSON.parse(errorBodyText);
+        if (errorJson.error) {
+            return `Erro do Servidor: ${errorJson.error}`;
+        }
+    } catch (e) {
+        // Se não for JSON, retorna a mensagem de status genérica
+        return `Falha na comunicação com o servidor (Status: ${response.status}). Verifique o console para detalhes.`;
+    }
+    return `Falha na comunicação com o servidor (Status: ${response.status}).`;
+}
+
+
+// --- Funções de busca (usando a função de erro) ---
+async function buscarDicasGerais() {
+    const resultadoDiv = document.getElementById('dicas-gerais-resultado');
+    resultadoDiv.style.display = 'block';
+    resultadoDiv.innerHTML = `<p class="loading"><i class="fas fa-spinner fa-spin"></i> Buscando dicas gerais...</p>`;
+    try {
+        const response = await fetch(`${backendUrl}/api/dicas-manutencao`);
+        if (!response.ok) throw new Error(await handleFetchError(response));
+        const dicas = await response.json();
+        exibirDicas(dicas, resultadoDiv, "Dicas de Manutenção Gerais");
+    } catch (error) {
+        resultadoDiv.innerHTML = `<p class="error"><i class="fas fa-times-circle"></i> ${error.message}</p>`;
+    }
+}
+
+async function buscarDicasEspecificas(tipoVeiculo) {
+    const resultadoDiv = document.getElementById('dicas-especificas-resultado');
+    resultadoDiv.style.display = 'block';
+    resultadoDiv.innerHTML = `<p class="loading"><i class="fas fa-spinner fa-spin"></i> Buscando dicas para ${tipoVeiculo}...</p>`;
+    try {
+        const response = await fetch(`${backendUrl}/api/dicas-manutencao/${encodeURIComponent(tipoVeiculo)}`);
+        if (!response.ok) throw new Error(await handleFetchError(response));
+        const data = await response.json();
+        exibirDicas(data, resultadoDiv, `Dicas Específicas para ${tipoVeiculo}`);
+    } catch (error) {
+        resultadoDiv.innerHTML = `<p class="error"><i class="fas fa-times-circle"></i> ${error.message}</p>`;
+    }
+}
+
+async function carregarVeiculosDestaque() {
+    const container = document.getElementById('cards-veiculos-destaque');
+    if (!container) return;
+    container.innerHTML = '<p class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando destaques...</p>';
+    try {
+        const response = await fetch(`${backendUrl}/api/garagem/veiculos-destaque`);
+        if (!response.ok) throw new Error(await handleFetchError(response));
+        const veiculos = await response.json();
+        // (O resto da lógica de exibição permanece a mesma)
+        container.innerHTML = '';
+        if (!veiculos || veiculos.length === 0) { container.innerHTML = '<p>Nenhum veículo em destaque no momento.</p>'; return; }
+        veiculos.forEach(veiculo => {
+            const card = document.createElement('div');
+            card.className = 'veiculo-card';
+            card.innerHTML = `
+                <img src="${veiculo.imagemUrl}" alt="Imagem do ${veiculo.modelo}" class="veiculo-card-img">
+                <div class="veiculo-card-body"><h4>${veiculo.modelo} (${veiculo.ano})</h4><p>${veiculo.destaque}</p></div>
+            `;
+            container.appendChild(card);
+        });
+    } catch (error) {
+        container.innerHTML = `<p class="error"><i class="fas fa-times-circle"></i> ${error.message}</p>`;
+    }
+}
+
+async function carregarServicosGaragem() {
+    const lista = document.getElementById('lista-servicos-oferecidos');
+    if (!lista) return;
+    lista.innerHTML = '<li><p class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando serviços...</p></li>';
+    try {
+        const response = await fetch(`${backendUrl}/api/garagem/servicos-oferecidos`);
+        if (!response.ok) throw new Error(await handleFetchError(response));
+        const servicos = await response.json();
+        // (O resto da lógica de exibição permanece a mesma)
+        lista.innerHTML = '';
+        if (!servicos || servicos.length === 0) { lista.innerHTML = '<li>Nenhum serviço disponível no momento.</li>'; return; }
+        servicos.forEach(servico => {
+            const item = document.createElement('li');
+            item.className = 'servico-item';
+            item.innerHTML = `<strong>${servico.nome}</strong><span>${servico.descricao}</span><em>Preço Estimado: ${servico.precoEstimado}</em>`;
+            lista.appendChild(item);
+        });
+    } catch (error) {
+        lista.innerHTML = `<li><p class="error"><i class="fas fa-times-circle"></i> ${error.message}</p></li>`;
+    }
+}
+
+// ... Cole o resto do seu código de `script.js` (funções de previsão do tempo, listeners, etc.) aqui
+
+// No final do seu listener 'DOMContentLoaded'
+document.addEventListener('DOMContentLoaded', () => {
+    // ... todo o seu código de inicialização ...
+    
+    // Chamadas para carregar os dados do backend assim que a página carrega
+    carregarVeiculosDestaque();
+    carregarServicosGaragem();
+
 });
+})
