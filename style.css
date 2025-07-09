@@ -798,6 +798,65 @@ label {
     font-weight: bold;
 }
 
+
+
+/* ... (todo o seu CSS existente) ... */
+
+/* ESTILOS PARA NOVA NAVEGAÇÃO E HEADER */
+header {
+    background-color: #ffffff;
+    padding: 10px 40px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    margin: -20px -20px 20px -20px; /* Expande para as bordas */
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+
+header h1 {
+    text-align: left;
+    margin: 0;
+    font-size: 1.8em;
+}
+
+.main-nav {
+    display: flex;
+    justify-content: flex-start;
+    gap: 25px;
+    margin-top: 10px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.main-nav a {
+    text-decoration: none;
+    color: #555;
+    font-weight: 600;
+    padding: 5px 0;
+    border-bottom: 2px solid transparent;
+    transition: color 0.3s, border-bottom-color 0.3s;
+}
+
+.main-nav a:hover {
+    color: #3498db;
+    border-bottom-color: #3498db;
+}
+
+.main-nav a i {
+    margin-right: 6px;
+}
+
+main {
+    padding-top: 20px;
+}
+
+section {
+    padding-top: 60px; /* Espaçamento para o cabeçalho fixo */
+    margin-top: -60px; /* Puxa a seção para cima para o link de âncora funcionar corretamente */
+}
+
+/* ... (resto do seu CSS) ... */
+
 /* ====================================================== */
 /* == FIM: ESTILOS ARSENAL DE DADOS ===================== */
 /* ====================================================== */

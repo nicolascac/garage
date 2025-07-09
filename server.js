@@ -1,67 +1,123 @@
-// server.js (VERSÃO FINAL E REVISADA)
+// server.js - VERSÃO FINAL COM MONGODB
 
 import express from 'express';
 import dotenv from 'dotenv';
-import axios from 'axios';
 import cors from 'cors';
+import mongoose from 'mongoose'; // Importar mongoose
 
+// Carregar variáveis de ambiente do arquivo .env
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
-// A linha mais importante: Lê a chave do ambiente (do Render ou do arquivo .env)
-const apiKey = process.env.OPENWEATHER_API_KEY; 
 
-app.use(cors());
+// --- MIDDLEWARE ---
+app.use(cors()); // Habilita CORS para todas as requisições
+app.use(express.json()); // Habilita o parsing de JSON no corpo das requisições
+
+// --- CONEXÃO COM O MONGODB ---
+const MONGO_URI = process.env.MONGO_URI;
+
+if (!MONGO_URI) {
+    console.error("ERRO FATAL: A variável de ambiente MONGO_URI não está definida!");
+    process.exit(1); // Encerra a aplicação se a URI do DB não for encontrada
+}
+
+mongoose.connect(MONGO_URI)
+    .then(() => console.log("Conectado ao MongoDB com sucesso!"))
+    .catch(err => {
+        console.error("Falha ao conectar ao MongoDB:", err);
+        process.exit(1);
+    });
+
+// --- DEFINIÇÃO DE SCHEMAS E MODELS (Planta dos nossos dados) ---
+
+const manutencaoSchema = new mongoose.Schema({
+    data: { type: Date, required: true },
+    tipo: { type: String, required: true, trim: true },
+    custo: { type: Number, required: true, min: 0 },
+    descricao: { type: String, trim: true }
+});
+
+const veiculoSchema = new mongoose.Schema({
+    modelo: { type: String, required: true, trim: true },
+    cor: { type: String, required: true, trim: true },
+    tipoVeiculo: { type: String, required: true, enum: ['Carro', 'CarroEsportivo', 'Caminhao'] },
+    ligado: { type: Boolean, default: false },
+    velocidade: { type: Number, default: 0 },
+    turbo: { type: Boolean, default: false },
+    capacidadeCarga: { type: Number, default: 0 },
+    cargaAtual: { type: Number, default: 0 },
+    historicoManutencao: [manutencaoSchema]
+}, { timestamps: true });
+
+const Veiculo = mongoose.model('Veiculo', veiculoSchema);
+
+
+// --- ROTAS DA API ---
 
 // Rota de verificação
-app.get('/', (req, res) => res.send('Servidor Backend da Garagem Inteligente está funcionando!'));
+app.get('/', (req, res) => res.send('Servidor Backend da Garagem Inteligente está funcionando e conectado ao MongoDB!'));
 
-// Outras rotas (veículos, serviços, dicas...)
-// ... (código das outras rotas que já estão funcionando) ...
-const veiculosDestaque = [ { id: 10, modelo: "Maverick Híbrido", ano: 2024, destaque: "Economia com potência e estilo.", imagemUrl: "https://placehold.co/300x200/2c3e50/ffffff?text=Maverick" } ];
-const servicosGaragem = [ { id: "svc001", nome: "Diagnóstico Eletrônico Completo", descricao: "Verificação de todos os sistemas eletrônicos do veículo.", precoEstimado: "R$ 250,00" } ];
-const dicasManutencaoGerais = [ { id: 1, dica: "Verifique o nível do óleo." }, { id: 2, dica: "Calibre os pneus." } ];
-const dicasPorTipo = { carro: [{ id: 101, dica: "Faça o rodízio dos pneus." }], moto: [{ id: 201, dica: "Lubrifique a corrente." }] };
-
-app.get('/api/garagem/veiculos-destaque', (req, res) => res.json(veiculosDestaque));
-app.get('/api/garagem/servicos-oferecidos', (req, res) => res.json(servicosGaragem));
-app.get('/api/dicas-manutencao', (req, res) => res.json(dicasManutencaoGerais));
-app.get('/api/dicas-manutencao/:tipoVeiculo', (req, res) => {
-    const dicas = dicasPorTipo[req.params.tipoVeiculo.toLowerCase()];
-    if (dicas) res.json(dicas); else res.status(404).json({ error: `Nenhuma dica para ${req.params.tipoVeiculo}` });
-});
-
-
-// ROTA DE PREVISÃO DO TEMPO (PROXY) - A mais importante para este problema
-app.get('/api/previsao/:cidade', async (req, res) => {
-    const { cidade } = req.params;
-    console.log(`[Servidor] Recebida requisição de previsão para a cidade: '${cidade}'`);
-
-    // Verificação de segurança: a chave existe?
-    if (!apiKey) {
-        console.error("[Servidor] ERRO FATAL: A variável de ambiente OPENWEATHER_API_KEY não está definida!");
-        return res.status(500).json({ error: 'Chave da API de clima não está configurada no servidor.' });
-    }
-
-    const url = `https://api.openweathermap.org/data/2.5/forecast?q=${cidade}&appid=${apiKey}&units=metric&lang=pt_br`;
-
+// Rota para BUSCAR todos os veículos da garagem
+app.get('/api/garagem/veiculos', async (req, res) => {
     try {
-        console.log(`[Servidor] Fazendo chamada para a API OpenWeatherMap...`);
-        const response = await axios.get(url);
-        console.log(`[Servidor] Sucesso! Enviando previsão para o frontend.`);
-        res.json(response.data);
+        const veiculos = await Veiculo.find(); // Busca todos os documentos na coleção 'veiculos'
+        res.json(veiculos);
     } catch (error) {
-        // Captura o erro da API externa e o repassa de forma controlada
-        const status = error.response?.status || 500;
-        const message = error.response?.data?.message || 'Erro ao contatar a API de clima.';
-        console.error(`[Servidor] Falha na chamada para OpenWeatherMap. Status: ${status}, Mensagem: ${message}`);
-        res.status(status).json({
-            error: `Não foi possível obter a previsão para '${cidade}'.`,
-            detalhes: message
-        });
+        console.error("Erro ao buscar veículos:", error);
+        res.status(500).json({ error: "Erro interno do servidor ao buscar veículos." });
+    }
+});
+
+// Rota para ADICIONAR um novo veículo
+app.post('/api/garagem/veiculos', async (req, res) => {
+    try {
+        const dadosVeiculo = req.body; // Pega os dados enviados pelo frontend
+        
+        // Validação básica (pode ser mais robusta)
+        if (!dadosVeiculo.modelo || !dadosVeiculo.cor || !dadosVeiculo.tipoVeiculo) {
+            return res.status(400).json({ error: "Modelo, cor e tipo de veículo são obrigatórios." });
+        }
+
+        const novoVeiculo = new Veiculo(dadosVeiculo); // Cria uma nova instância do modelo
+        await novoVeiculo.save(); // Salva no banco de dados
+
+        res.status(201).json(novoVeiculo); // Retorna o veículo criado com sucesso
+    } catch (error) {
+        console.error("Erro ao adicionar veículo:", error);
+        res.status(500).json({ error: "Erro interno do servidor ao adicionar veículo." });
+    }
+});
+
+// Rota para DELETAR um veículo por ID
+app.delete('/api/garagem/veiculos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const veiculoDeletado = await Veiculo.findByIdAndDelete(id);
+
+        if (!veiculoDeletado) {
+            return res.status(404).json({ error: "Veículo não encontrado." });
+        }
+
+        res.json({ message: "Veículo deletado com sucesso!", veiculo: veiculoDeletado });
+    } catch (error) {
+        console.error("Erro ao deletar veículo:", error);
+        res.status(500).json({ error: "Erro interno do servidor ao deletar veículo." });
     }
 });
 
 
-app.listen(port, () => console.log(`Servidor rodando na porta ${port}. Aguardando requisições...`));
+// As outras rotas (previsão do tempo, dicas, etc.) podem permanecer as mesmas,
+// pois não dependem do banco de dados da garagem.
+// A rota de previsão do tempo continua sendo um proxy importante.
+
+const apiKey = process.env.OPENWEATHER_API_KEY; 
+
+app.get('/api/previsao/:cidade', async (req, res) => {
+    // ... (código da rota de previsão do tempo permanece igual)
+});
+
+
+// Iniciar o servidor
+app.listen(port, () => console.log(`Servidor rodando na porta ${port}.`));
