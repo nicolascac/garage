@@ -3,148 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Garagem Inteligente Unificada</title>
+    <title>Garagem Inteligente com DB</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <header>
-        <h1><i class="fas fa-warehouse"></i> Garagem Inteligente Unificada</h1>
-        <nav class="main-nav">
-            <a href="#secao-adicionar-veiculo"><i class="fas fa-plus-circle"></i> Adicionar Veículo</a>
-            <a href="#secao-garagem"><i class="fas fa-car"></i> Minha Garagem</a>
-            <a href="#secao-planejador-viagem"><i class="fas fa-map-marked-alt"></i> Planejador de Viagem</a>
-            <a href="#secao-veiculos-destaque"><i class="fas fa-star"></i> Destaques</a>
-        </nav>
+        <h1><i class="fas fa-warehouse"></i> Garagem Inteligente com Banco de Dados</h1>
     </header>
 
     <main>
         <div id="notificacoes"></div>
 
         <section id="secao-adicionar-veiculo" class="form-section">
-            <h2><i class="fas fa-plus-circle"></i> Adicionar Novo Veículo</h2>
+            <h2><i class="fas fa-plus-circle"></i> Adicionar Novo Veículo na Garagem</h2>
             <form id="formAdicionarVeiculo">
-                <label for="tipoVeiculo">Tipo:</label>
-                <select id="tipoVeiculo" required>
-                    <option value="" disabled selected>Selecione o tipo</option>
-                    <option value="Carro">Carro</option>
-                    <option value="CarroEsportivo">Carro Esportivo</option>
-                    <option value="Caminhao">Caminhão</option>
-                </select>
-                <label for="modeloVeiculo">Modelo:</label>
-                <input type="text" id="modeloVeiculo" placeholder="Ex: Fusca, Ferrari, Scania" required>
-                <label for="corVeiculo">Cor:</label>
-                <input type="text" id="corVeiculo" placeholder="Ex: Azul, Vermelho, Prata" required>
-                <div id="campoCapacidadeCarga" style="display: none;">
-                    <label for="capacidadeCargaVeiculo">Capacidade de Carga (kg):</label>
-                    <input type="number" id="capacidadeCargaVeiculo" min="0" placeholder="Ex: 10000">
+                <div class="form-grid">
+                    <div>
+                        <label for="placa">Placa:</label>
+                        <input type="text" id="placa" placeholder="ABC1234" required>
+                    </div>
+                    <div>
+                        <label for="marca">Marca:</label>
+                        <input type="text" id="marca" placeholder="Ex: Volkswagen" required>
+                    </div>
+                    <div>
+                        <label for="modelo">Modelo:</label>
+                        <input type="text" id="modelo" placeholder="Ex: Fusca" required>
+                    </div>
+                    <div>
+                        <label for="ano">Ano:</label>
+                        <input type="number" id="ano" placeholder="Ex: 1970" required>
+                    </div>
+                    <div>
+                        <label for="cor">Cor (Opcional):</label>
+                        <input type="text" id="cor" placeholder="Ex: Azul">
+                    </div>
                 </div>
-                <button type="submit"><i class="fas fa-save"></i> Adicionar à Garagem</button>
+                <button type="submit" id="btnAdicionar"><i class="fas fa-save"></i> Adicionar à Garagem</button>
             </form>
         </section>
 
         <section id="secao-garagem" class="list-section">
-            <h2><i class="fas fa-car"></i> Garagem</h2>
-            <div id="listaVeiculos"><p class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando veículos...</p></div>
+            <h2><i class="fas fa-car"></i> Veículos na Garagem (Persistente)</h2>
+            <div id="listaVeiculos"><p class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando veículos do banco de dados...</p></div>
         </section>
-
-        <section class="list-section">
-            <h3><i class="fas fa-calendar-alt"></i> Próximos Agendamentos</h3>
-            <div id="listaAgendamentosFuturos"><p>Nenhum agendamento futuro encontrado.</p></div>
-        </section>
-
-        <section id="secao-planejador-viagem" class="form-section">
-            <h2><i class="fas fa-map-marked-alt"></i> Planejar Viagem com Clima</h2>
-            <label for="destino-viagem">Cidade de Destino:</label>
-            <input type="text" id="destino-viagem" placeholder="Digite o nome da cidade">
-            <button id="verificar-clima-btn"><i class="fas fa-cloud-sun"></i> Verificar Clima</button>
-            <div class="forecast-controls" id="forecast-interaction-controls" style="display: none;">
-                <div class="control-group">
-                    <label>Mostrar previsão para:</label>
-                    <div class="options" id="dias-filter-options">
-                        <button data-dias="1">Hoje</button>
-                        <button data-dias="3">3 Dias</button>
-                        <button data-dias="5" class="active">5 Dias</button>
-                    </div>
-                </div>
-                <div class="control-group">
-                    <span class="highlight-options-title">Opções de Destaque:</span>
-                    <div class="options" id="highlight-filter-options">
-                        <label><input type="checkbox" data-tipo="chuva"> Destacar Chuva</label>
-                        <label><input type="checkbox" data-tipo="temp_baixa"> Temp. Baixa (<10°C)</label>
-                        <label><input type="checkbox" data-tipo="temp_alta"> Temp. Alta (>30°C)</label>
-                    </div>
-                </div>
-            </div>
-            <div id="previsao-tempo-resultado"></div>
-        </section>
-
-        <section id="secao-veiculos-destaque" class="list-section">
-            <h2><i class="fas fa-star"></i> Veículos em Destaque</h2>
-            <div id="cards-veiculos-destaque" class="cards-container">
-                <!-- Os cards dos veículos serão inseridos aqui pelo JavaScript -->
-            </div>
-        </section>
-    
-        <section id="secao-servicos" class="list-section">
-            <h2><i class="fas fa-tools"></i> Nossos Serviços</h2>
-            <ul id="lista-servicos-oferecidos">
-                <!-- A lista de serviços será inserida aqui pelo JavaScript -->
-            </ul>
-        </section>
-
-        <section id="dicas-manutencao" class="form-section">
-            <h2><i class="fas fa-cogs"></i> Dicas de Manutenção (via API)</h2>
-            <button id="buscar-dicas-gerais-btn"><i class="fas fa-list-alt"></i> Ver Dicas Gerais</button>
-            <div id="dicas-gerais-resultado" class="list-section" style="margin-top: 15px; display: none;"></div>
-    
-            <hr style="margin: 20px 0;">
-    
-            <label for="tipo-veiculo-dica-input">Buscar dicas para um tipo de veículo:</label>
-            <input type="text" id="tipo-veiculo-dica-input" placeholder="Ex: carro, moto">
-            <button id="buscar-dicas-especificas-btn"><i class="fas fa-search"></i> Buscar Dica Específica</button>
-            <div id="dicas-especificas-resultado" class="list-section" style="margin-top: 15px; display: none;"></div>
-        </section>
+        
     </main>
     
-    <div id="modalDetalhesVeiculo" class="modal">
-        <div class="modal-content">
-            <span class="close-button" onclick="fecharModal()">×</span>
-            <h2 id="modalTituloVeiculo">Detalhes do Veículo</h2>
-            
-            <div id="modalInfoVeiculo" class="info-veiculo"></div>
-            <div id="modalAcoesVeiculo" class="actions"></div>
+    <!-- O modal e outras seções foram omitidos para focar na tarefa, mas podem ser mantidos -->
 
-            <div id="detalhes-extras-api" class="info-veiculo">
-                <div id="detalhes-extras-api-content"></div>
-            </div>
-            
-            <div class="list-section">
-                <h3>Histórico e Agendamentos</h3>
-                <div id="modalHistoricoManutencao"></div>
-            </div>
-            
-            <div class="form-section">
-                <h3>Adicionar/Agendar Manutenção</h3>
-                <form id="formManutencao">
-                    <input type="hidden" id="manutencaoVeiculoId">
-                    <label for="manutencaoData">Data e Hora:</label>
-                    <input type="text" id="manutencaoData" placeholder="Selecione a data..." required>
-                    <label for="manutencaoTipo">Tipo de Serviço:</label>
-                    <input type="text" id="manutencaoTipo" placeholder="Ex: Troca de óleo, Revisão" required>
-                    <label for="manutencaoCusto">Custo (R$):</label>
-                    <input type="number" id="manutencaoCusto" step="0.01" min="0" placeholder="Ex: 150.50" required>
-                    <label for="manutencaoDescricao">Descrição (Opcional):</label>
-                    <textarea id="manutencaoDescricao" placeholder="Detalhes do serviço..."></textarea>
-                    <button type="submit"><i class="fas fa-save"></i> Salvar Manutenção</button>
-                </form>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
     <script src="script.js"></script>
+    <style>
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+    </style>
 </body>
 </html>

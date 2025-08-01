@@ -671,8 +671,8 @@ async function buscarEExibirDetalhesAPI(veiculoId) {
 
 // *** PASSO 1: DEFINA A URL BASE DO SEU BACKEND AQUI EM CIMA ***
 // Use a URL do Render quando o backend estiver na nuvem.
-const backendUrl = "https://garage-2dux.onrender.com";
-//const backendUrl = "http://localhost:3001";
+//const backendUrl = "https://garage-2dux.onrender.com";
+const backendUrl = "http://localhost:3001";
 
 
 
