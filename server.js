@@ -1,26 +1,22 @@
-// server.js - VERSÃO COM NOVOS ENDPOINTS CRUD (Create/Read)
+/// server.js - VERSÃO FINAL COM CRUD COMPLETO
 
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import mongoose from 'mongoose';
-import Veiculo from './models/Veiculo.js'; // Importando o novo modelo
 
-// Carregar variáveis de ambiente do arquivo .env
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
 
-// --- MIDDLEWARE ---
 app.use(cors());
 app.use(express.json());
 
-// --- CONEXÃO COM O MONGODB ---
-const MONGO_URI = process.env.MONGO_URI_CRUD || process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
-    console.error("ERRO FATAL: A variável de ambiente MONGO_URI_CRUD ou MONGO_URI não está definida!");
+    console.error("ERRO FATAL: A variável de ambiente MONGO_URI não está definida!");
     process.exit(1);
 }
 
@@ -31,54 +27,100 @@ mongoose.connect(MONGO_URI)
         process.exit(1);
     });
 
-// --- NOVAS ROTAS DA API PARA CRUD DE VEÍCULOS ---
-
-// Rota para LER (Read) todos os veículos
-app.get('/api/veiculos', async (req, res) => {
-    try {
-        const todosOsVeiculos = await Veiculo.find(); // .find() sem argumentos busca todos
-        
-        console.log('[Servidor] Buscando todos os veículos do DB.');
-        res.json(todosOsVeiculos);
-
-    } catch (error) {
-        console.error("[Servidor] Erro ao buscar veículos:", error);
-        res.status(500).json({ error: 'Erro interno ao buscar veículos.' });
-    }
+const manutencaoSchema = new mongoose.Schema({
+    data: { type: Date, required: true },
+    tipo: { type: String, required: true, trim: true },
+    custo: { type: Number, required: true, min: 0 },
+    descricao: { type: String, trim: true }
 });
 
-// Rota para CRIAR (Create) um novo veículo
-app.post('/api/veiculos', async (req, res) => {
-    try {
-        const novoVeiculoData = req.body;
-        // O Mongoose aplicará as validações do Schema aqui
-        const veiculoCriado = await Veiculo.create(novoVeiculoData);
-        
-        console.log('[Servidor] Veículo criado com sucesso:', veiculoCriado);
-        res.status(201).json(veiculoCriado); // Retorna o veículo criado com o _id do DB
+const veiculoSchema = new mongoose.Schema({
+    modelo: { type: String, required: true, trim: true },
+    cor: { type: String, required: true, trim: true },
+    tipoVeiculo: { type: String, required: true, enum: ['Carro', 'CarroEsportivo', 'Caminhao'] },
+    // Adicione outros campos que podem ser atualizados
+    ligado: { type: Boolean, default: false },
+    velocidade: { type: Number, default: 0 },
+    turbo: { type: Boolean, default: false },
+    capacidadeCarga: { type: Number, default: 0 },
+    cargaAtual: { type: Number, default: 0 },
+    historicoManutencao: [manutencaoSchema]
+}, { timestamps: true });
 
-    } catch (error) {
-        console.error("[Servidor] Erro ao criar veículo:", error);
-        // Tratamento de erros de validação e duplicidade do Mongoose
-        if (error.code === 11000) { // Erro de placa duplicada (unique)
-            return res.status(409).json({ error: 'Veículo com esta placa já existe.' });
-        }
-        if (error.name === 'ValidationError') { // Erros de campos obrigatórios, min/max, etc.
-             const messages = Object.values(error.errors).map(val => val.message);
-             return res.status(400).json({ error: messages.join(' ') });
-        }
-        res.status(500).json({ error: 'Erro interno ao criar veículo.' });
-    }
-});
+const Veiculo = mongoose.model('Veiculo', veiculoSchema);
 
+// --- ROTAS DA API ---
 
-// --- ROTAS ANTIGAS (Podem ser mantidas para outras funcionalidades) ---
 app.get('/', (req, res) => res.send('Servidor Backend da Garagem Inteligente está funcionando e conectado ao MongoDB!'));
 
-const apiKey = process.env.OPENWEATHER_API_KEY; 
-app.get('/api/previsao/:cidade', async (req, res) => {
-    // ... (o código da rota de previsão do tempo pode permanecer aqui)
+// READ: Buscar todos os veículos
+app.get('/api/garagem/veiculos', async (req, res) => {
+    try {
+        const veiculos = await Veiculo.find().sort({ modelo: 1 });
+        res.json(veiculos);
+    } catch (error) {
+        console.error("Erro ao buscar veículos:", error);
+        res.status(500).json({ error: "Erro interno do servidor ao buscar veículos." });
+    }
 });
 
-// Iniciar o servidor
+// CREATE: Adicionar um novo veículo
+app.post('/api/garagem/veiculos', async (req, res) => {
+    try {
+        const dadosVeiculo = req.body;
+        if (!dadosVeiculo.modelo || !dadosVeiculo.cor || !dadosVeiculo.tipoVeiculo) {
+            return res.status(400).json({ error: "Modelo, cor e tipo de veículo são obrigatórios." });
+        }
+        const novoVeiculo = new Veiculo(dadosVeiculo);
+        await novoVeiculo.save();
+        res.status(201).json(novoVeiculo);
+    } catch (error) {
+        console.error("Erro ao adicionar veículo:", error);
+        res.status(500).json({ error: "Erro interno do servidor ao adicionar veículo." });
+    }
+});
+
+// **NOVO** UPDATE: Atualizar um veículo por ID
+app.put('/api/garagem/veiculos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const dadosAtualizados = req.body;
+
+        const veiculoAtualizado = await Veiculo.findByIdAndUpdate(
+            id, 
+            dadosAtualizados, 
+            { new: true, runValidators: true } // Opções: retorna o doc atualizado e roda as validações
+        );
+
+        if (!veiculoAtualizado) {
+            return res.status(404).json({ error: "Veículo não encontrado para atualização." });
+        }
+
+        res.json(veiculoAtualizado);
+    } catch (error) {
+        console.error("Erro ao atualizar veículo:", error);
+        res.status(500).json({ error: "Erro interno do servidor ao atualizar veículo." });
+    }
+});
+
+
+// DELETE: Deletar um veículo por ID
+app.delete('/api/garagem/veiculos/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const veiculoDeletado = await Veiculo.findByIdAndDelete(id);
+
+        if (!veiculoDeletado) {
+            return res.status(404).json({ error: "Veículo não encontrado." });
+        }
+
+        res.json({ message: "Veículo deletado com sucesso!" });
+    } catch (error) {
+        console.error("Erro ao deletar veículo:", error);
+        res.status(500).json({ error: "Erro interno do servidor ao deletar veículo." });
+    }
+});
+
+// ... (outras rotas de API como previsão do tempo e dicas podem ser mantidas aqui)
+
 app.listen(port, () => console.log(`Servidor rodando na porta ${port}.`));

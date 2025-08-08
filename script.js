@@ -1,3 +1,8 @@
+
+
+
+
+
 // --- Classe Manutencao (Sem alterações) ---
 class Manutencao {
     constructor(data, tipo, custo, descricao = '') {
@@ -317,25 +322,27 @@ function salvarGaragem() {
     }
 }
 
-function carregarGaragem() {
+// --- NOVO CÓDIGO para a função carregarGaragem ---
+async function carregarGaragem() {
+    const listaVeiculosDiv = document.getElementById('listaVeiculos');
     try {
-        const garagemJSON = localStorage.getItem(STORAGE_KEY);
-        if (garagemJSON) {
-            const garagemGenerica = JSON.parse(garagemJSON);
-            garagem = garagemGenerica.map(veiculoJSON => Veiculo.fromJSON(veiculoJSON)).filter(v => v !== null);
-             if (garagem.length !== garagemGenerica.length) {
-                console.warn("Alguns veículos não puderam ser carregados.");
-                exibirNotificacao("Aviso: Alguns dados de veículos podem não ter carregado.", 'warning');
-             }
-        } else { garagem = []; }
+        const response = await fetch(`${backendUrl}/api/garagem/veiculos`);
+        if (!response.ok) {
+            throw new Error('Não foi possível carregar os veículos do servidor.');
+        }
+        const veiculosDoBackend = await response.json();
+        // A variável 'garagem' agora será um cache dos dados do backend
+        garagem = veiculosDoBackend; 
+        renderizarGaragem();
+        // A função de agendamentos futuros precisará ser adaptada depois, se necessário
+        // renderizarAgendamentosFuturos(); 
     } catch (error) {
-        console.error("Erro ao carregar/parsear garagem:", error);
-        exibirNotificacao("Erro ao carregar dados da garagem. Iniciando vazia.", 'error');
-        garagem = [];
+        console.error("Erro ao carregar garagem:", error);
+        exibirNotificacao(error.message, 'error');
+        if (listaVeiculosDiv) {
+            listaVeiculosDiv.innerHTML = `<p class="error">Falha ao carregar veículos. Verifique a conexão com o servidor.</p>`;
+        }
     }
-    renderizarGaragem();
-    renderizarAgendamentosFuturos();
-    if (typeof verificarAgendamentosProximos === 'function') verificarAgendamentosProximos();
 }
 
 // --- Funções de Renderização da UI ---
@@ -351,14 +358,14 @@ function renderizarGaragem() {
     garagem.forEach(veiculo => {
         const itemDiv = document.createElement('div');
         itemDiv.classList.add('vehicle-item');
-        itemDiv.setAttribute('data-id', veiculo.id);
-        itemDiv.innerHTML = `
-            <span><strong style="color: #2980b9;">${veiculo.modelo}</strong> (${veiculo.tipoVeiculo}) - Cor: ${veiculo.cor}</span>
-            <div class="actions">
-                <button onclick="abrirModalDetalhes('${veiculo.id}')" title="Ver detalhes, histórico e agendar manutenção"><i class="fas fa-cog"></i> Detalhes / Manutenção</button>
-                <button class="warning" onclick="removerVeiculo('${veiculo.id}')" title="Remover veículo permanentemente"><i class="fas fa-trash-alt"></i> Remover</button>
-            </div>
-        `;
+        itemDiv.setAttribute('data-id', veiculo._id); // Importante: usar _id
+itemDiv.innerHTML = `
+    <span><strong style="color: #2980b9;">${veiculo.modelo}</strong> (${veiculo.tipoVeiculo}) - Cor: ${veiculo.cor}</span>
+    <div class="actions">
+        <button onclick="abrirModalEdicao('${veiculo._id}')" title="Editar Veículo"><i class="fas fa-edit"></i> Editar</button>
+        <button class="warning" onclick="removerVeiculo('${veiculo._id}')" title="Remover veículo permanentemente"><i class="fas fa-trash-alt"></i> Remover</button>
+    </div>
+`;``
         listaVeiculosDiv.appendChild(itemDiv);
     });
 }
@@ -403,32 +410,88 @@ function renderizarAgendamentosFuturos() {
 const modal = document.getElementById('modalDetalhesVeiculo');
 const modalContent = modal ? modal.querySelector('.modal-content') : null; 
 
-function abrirModalDetalhes(veiculoId) {
-    if (!modal || !modalContent) return; 
-    const veiculo = garagem.find(v => v.id === veiculoId);
-    if (!veiculo) { exibirNotificacao("Erro: Veículo não encontrado.", "error"); return; }
+// --- ADICIONE ESTAS DUAS NOVAS FUNÇÕES ---
 
-    document.getElementById('modalTituloVeiculo').textContent = `Detalhes: ${veiculo.modelo} (${veiculo.cor})`;
-    document.getElementById('manutencaoVeiculoId').value = veiculoId;
-    atualizarInfoVeiculoNoModal(veiculoId);
-    renderizarHistoricoManutencaoModal(veiculoId);
+/**
+ * Abre o modal preenchido com um formulário para editar o veículo.
+ */
+function abrirModalEdicao(veiculoId) {
+    const veiculo = garagem.find(v => v._id === veiculoId);
+    if (!veiculo) {
+        exibirNotificacao("Veículo não encontrado para edição.", "error");
+        return;
+    }
 
-    const detalhesApiContentDiv = document.getElementById('detalhes-extras-api-content');
-    if (detalhesApiContentDiv) { 
-        detalhesApiContentDiv.innerHTML = '<p class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando detalhes extras...</p>';
-        buscarEExibirDetalhesAPI(veiculoId);
-    }
+    const modal = document.getElementById('modalDetalhesVeiculo');
+    const modalContent = modal.querySelector('.modal-content');
     
-    const formManutencaoEl = document.getElementById('formManutencao');
-    if (formManutencaoEl) formManutencaoEl.reset();
-    if (typeof flatpickr === 'function') { 
-        flatpickr("#manutencaoData", { enableTime: true, dateFormat: "Y-m-d H:i", locale: "pt" });
-    }
-    
+    // Limpa conteúdo anterior e cria o formulário de edição dinamicamente
+    modalContent.innerHTML = `
+        <span class="close-button" onclick="fecharModal()">×</span>
+        <h2 id="modalTituloVeiculo">Editar Veículo: ${veiculo.modelo}</h2>
+        <div class="form-section">
+            <form id="formEditarVeiculo">
+                <label for="editModeloVeiculo">Modelo:</label>
+                <input type="text" id="editModeloVeiculo" value="${veiculo.modelo}" required>
+                
+                <label for="editCorVeiculo">Cor:</label>
+                <input type="text" id="editCorVeiculo" value="${veiculo.cor}" required>
+                
+                ${veiculo.tipoVeiculo === 'Caminhao' ? `
+                <div id="editCampoCapacidadeCarga">
+                    <label for="editCapacidadeCargaVeiculo">Capacidade de Carga (kg):</label>
+                    <input type="number" id="editCapacidadeCargaVeiculo" value="${veiculo.capacidadeCarga || 0}" min="0">
+                </div>
+                ` : ''}
+
+                <button type="submit"><i class="fas fa-save"></i> Salvar Alterações</button>
+            </form>
+        </div>
+    `;
+
     modal.style.display = 'block';
-    modalContent.classList.add('animate-in');
+    
+    // Adiciona o event listener para o formulário que acabamos de criar
+    document.getElementById('formEditarVeiculo').addEventListener('submit', (e) => handleEditarVeiculo(e, veiculoId));
 }
 
+/**
+ * Lida com a submissão do formulário de edição de um veículo.
+ */
+async function handleEditarVeiculo(event, veiculoId) {
+    event.preventDefault();
+    
+    const veiculoOriginal = garagem.find(v => v._id === veiculoId);
+    if(!veiculoOriginal) return;
+
+    // Coleta os dados do formulário de edição
+    const dadosAtualizados = {
+        modelo: document.getElementById('editModeloVeiculo').value,
+        cor: document.getElementById('editCorVeiculo').value,
+        ...(veiculoOriginal.tipoVeiculo === 'Caminhao' && { 
+            capacidadeCarga: parseFloat(document.getElementById('editCapacidadeCargaVeiculo').value) || 0 
+        })
+    };
+
+    try {
+        const response = await fetch(`${backendUrl}/api/garagem/veiculos/${veiculoId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(dadosAtualizados)
+        });
+
+        if (!response.ok) {
+            const errData = await response.json();
+            throw new Error(errData.error || 'Erro ao atualizar veículo.');
+        }
+
+        exibirNotificacao('Veículo atualizado com sucesso!', 'success');
+        fecharModal();
+        carregarGaragem(); // Recarrega a lista para mostrar os dados atualizados
+    } catch (error) {
+        exibirNotificacao(error.message, 'error');
+    }
+}
 function fecharModal() {
     if (!modal || !modalContent) return;
     modalContent.classList.add('animate-out');
@@ -500,30 +563,49 @@ function executarAcaoVeiculo(veiculoId, acao, param = null) {
 // --- Manipulação de Formulários e Eventos ---
 const formAdicionarVeiculo = document.getElementById('formAdicionarVeiculo');
 if (formAdicionarVeiculo) {
-    formAdicionarVeiculo.addEventListener('submit', function(event) {
+    formAdicionarVeiculo.addEventListener('submit',async function(event) {
         event.preventDefault();
         const tipo = document.getElementById('tipoVeiculo').value;
         const modelo = document.getElementById('modeloVeiculo').value;
         const cor = document.getElementById('corVeiculo').value;
         if (!tipo || !modelo.trim() || !cor.trim()) { exibirNotificacao("Preencha tipo, modelo e cor.", 'warning'); return; }
         let novoVeiculo;
-        try {
-            switch (tipo) {
-                case 'Carro': novoVeiculo = new Carro(modelo, cor); break;
-                case 'CarroEsportivo': novoVeiculo = new CarroEsportivo(modelo, cor); break;
-                case 'Caminhao':
-                    const capInput = document.getElementById('capacidadeCargaVeiculo'); const capacidade = capInput.value;
-                    if (!capacidade || isNaN(parseFloat(capacidade)) || parseFloat(capacidade) < 0) {
-                        exibirNotificacao("Capacidade de carga inválida.", 'error'); capInput.focus(); return;
-                    } novoVeiculo = new Caminhao(modelo, cor, capacidade); break;
-                default: exibirNotificacao("Tipo inválido.", 'error'); return;
-            }
-            garagem.push(novoVeiculo); salvarGaragem(); renderizarGaragem();
-            exibirNotificacao(`Veículo ${modelo} adicionado!`, 'success');
-            formAdicionarVeiculo.reset();
-            const campoCapacidade = document.getElementById('campoCapacidadeCarga');
-            if (campoCapacidade) campoCapacidade.style.display = 'none';
-        } catch (error) { console.error("Erro ao criar/adicionar veículo:", error); exibirNotificacao(`Erro: ${error.message}`, 'error'); }
+       try {
+    const novoVeiculoData = {
+        tipoVeiculo: tipo,
+        modelo: modelo,
+        cor: cor,
+    };
+    // Adiciona capacidade de carga apenas se for um caminhão
+    if (tipo === 'Caminhao') {
+        const capacidade = document.getElementById('capacidadeCargaVeiculo').value;
+        if (!capacidade || parseFloat(capacidade) < 0) {
+             exibirNotificacao("Capacidade de carga inválida.", 'error');
+             return;
+        }
+        novoVeiculoData.capacidadeCarga = parseFloat(capacidade);
+    }
+
+    const response = await fetch(`${backendUrl}/api/garagem/veiculos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(novoVeiculoData)
+    });
+
+    if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Erro ao adicionar veículo.');
+    }
+
+    exibirNotificacao(`Veículo ${modelo} adicionado com sucesso!`, 'success');
+    formAdicionarVeiculo.reset();
+    document.getElementById('campoCapacidadeCarga').style.display = 'none';
+    carregarGaragem(); // Recarrega a lista da garagem para mostrar o novo item
+    
+} catch (error) {
+    console.error("Erro ao adicionar veículo:", error);
+    exibirNotificacao(error.message, 'error');
+}
     });
 }
 
@@ -584,6 +666,8 @@ function removerManutencao(veiculoId, manutencaoId) {
         } else { exibirNotificacao('Não foi possível remover.', 'error'); }
     }
 }
+
+
 
 // --- Notificações e Lembretes ---
 let notificationTimeout;
@@ -671,8 +755,8 @@ async function buscarEExibirDetalhesAPI(veiculoId) {
 
 // *** PASSO 1: DEFINA A URL BASE DO SEU BACKEND AQUI EM CIMA ***
 // Use a URL do Render quando o backend estiver na nuvem.
-//const backendUrl = "https://garage-2dux.onrender.com";
-const backendUrl = "http://localhost:3001";
+const backendUrl = "https://garage-2dux.onrender.com";
+//const backendUrl = "http://localhost:3001";
 
 
 
@@ -1094,3 +1178,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 })
+
