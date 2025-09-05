@@ -1,6 +1,7 @@
 /// server.js - VERSÃO FINAL COM CRUD COMPLETO
 
 import express from 'express';
+import axios from 'axios';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import mongoose from 'mongoose';
@@ -123,6 +124,27 @@ app.delete('/api/garagem/veiculos/:id', async (req, res) => {
         res.status(500).json({ error: "Erro interno do servidor ao deletar veículo." });
     }
 });
+
+app.get('/api/previsao/:cidade', async (req, res) => {
+    try {
+        const { cidade } = req.params;
+        const apiKey = process.env.OPENWEATHER_API_KEY;
+
+        const weatherAPIUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(cidade)}&appid=${apiKey}&units=metric&lang=pt_br`;
+
+        // Chama a API do OpenWeatherMap
+        const response = await axios.get(weatherAPIUrl);
+
+        // Envia a resposta de volta para o seu front-end
+        res.json(response.data);
+
+    } catch (error) {
+        // Se der erro, avisa no console e envia uma resposta de erro genérica
+        console.error("Erro ao buscar previsão:", error.response?.data || error.message);
+        res.status(500).json({ error: 'Falha ao buscar a previsão do tempo.' });
+    }
+});
+
 
 // ... (outras rotas de API como previsão do tempo e dicas podem ser mantidas aqui)
 
