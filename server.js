@@ -4,15 +4,18 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import mongoose from 'mongoose';
-
+import path,{dirname} from 'path';
+import { fileURLToPath } from 'url';
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename);
 
 app.use(cors());
 app.use(express.json());
-
+app.use(express.static(path.join(__dirname)))
 const MONGO_URI = process.env.MONGO_URI;
 
 if (!MONGO_URI) {
@@ -123,4 +126,4 @@ app.delete('/api/garagem/veiculos/:id', async (req, res) => {
 
 // ... (outras rotas de API como previsão do tempo e dicas podem ser mantidas aqui)
 
-app.listen(port, () => console.log(`Servidor rodando na porta ${port}.`));
+app.listen(5000, () => console.log(`Servidor rodando na porta ${port}.`));
