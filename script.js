@@ -644,12 +644,46 @@ if (formManutencaoElEvt) {
     });
 }
 
-function removerVeiculo(veiculoId) {
-    const veiculo = garagem.find(v => v.id === veiculoId); if (!veiculo) { exibirNotificacao("Erro: Veículo não encontrado.", "error"); return; }
-    if (confirm(`ATENÇÃO!\nDeseja remover PERMANENTEMENTE "${veiculo.modelo} (${veiculo.cor})"?\n\nHistórico será perdido.`)) {
-        garagem = garagem.filter(v => v.id !== veiculoId); salvarGaragem(); renderizarGaragem(); renderizarAgendamentosFuturos();
-        exibirNotificacao(`Veículo ${veiculo.modelo} removido.`, 'success');
-        if (modal && modal.style.display === 'block' && document.getElementById('manutencaoVeiculoId') && document.getElementById('manutencaoVeiculoId').value === veiculoId) { fecharModal(); }
+// script.js (Cole esta nova versão da função no lugar da antiga)
+
+/**
+ * Envia uma requisição DELETE ao servidor para remover um veículo permanentemente.
+ * @param {string} veiculoId O ID do veículo a ser removido (vem do MongoDB).
+ */
+async function removerVeiculo(veiculoId) {
+    // Encontra o veículo na lista local para usar o nome na mensagem de confirmação
+    const veiculo = garagem.find(v => v._id === veiculoId);
+    if (!veiculo) {
+        exibirNotificacao("Erro: Veículo não encontrado na lista local.", "error");
+        return;
+    }
+
+    // Pede confirmação ao usuário antes de uma ação destrutiva
+    if (confirm(`ATENÇÃO!\nDeseja remover PERMANENTEMENTE "${veiculo.modelo} (${veiculo.cor})"?\n\nEsta ação não pode ser desfeita.`)) {
+        try {
+            // Envia a requisição DELETE para o endpoint correto no servidor
+            const response = await fetch(`${backendUrl}/api/garagem/veiculos/${veiculoId}`, {
+                method: 'DELETE'
+            });
+
+            const data = await response.json(); // Pega a resposta do servidor (ex: { message: "..." })
+
+            // Se a resposta do servidor não for "OK" (status 200-299), lança um erro
+            if (!response.ok) {
+                throw new Error(data.error || 'Erro desconhecido ao deletar o veículo.');
+            }
+
+            // Se tudo deu certo:
+            exibirNotificacao(data.message || 'Veículo removido com sucesso!', 'success');
+            
+            // Recarrega a lista da garagem para que a UI reflita a remoção
+            carregarGaragem();
+
+        } catch (error) {
+            // Captura qualquer erro (de rede ou do servidor) e exibe uma notificação
+            console.error("Erro ao remover veículo:", error);
+            exibirNotificacao(error.message, 'error');
+        }
     }
 }
 
@@ -1063,7 +1097,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // == INÍCIO SEÇÃO DA API - VERSÃO FINAL REVISADA =======================================
 // ======================================================================================
 
-const backendUrl = "https://garage-2dux.onrender.com"; // VERIFIQUE ESTA URL!
+//const backendUrl = "https://garage-2dux.onrender.com"; // VERIFIQUE ESTA URL!
 
 /**
  * Função auxiliar para tratar erros de fetch, fornecendo mais detalhes no console.
@@ -1175,8 +1209,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Chamadas para carregar os dados do backend assim que a página carrega
     carregarVeiculosDestaque();
     carregarServicosGaragem();
-
-    
 
 });
 })

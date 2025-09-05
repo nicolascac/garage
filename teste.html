@@ -120,39 +120,29 @@
                 <div id="detalhes-extras-api-content"></div>
             </div>
             
-  <div class="list-section">
-                <h3>Histórico e Agendamentos de Manutenção</h3>
-                <div id="modalHistoricoManutencao">
-                    <!-- Manutenções serão carregadas aqui pelo JS -->
-                    <p>Carregando histórico...</p>
-                </div>
+            <div class="list-section">
+                <h3>Histórico e Agendamentos</h3>
+                <div id="modalHistoricoManutencao"></div>
             </div>
             
             <div class="form-section">
-                <h3>Adicionar Nova Manutenção ou Agendar Serviço</h3>
+                <h3>Adicionar/Agendar Manutenção</h3>
                 <form id="formManutencao">
-                    <!-- Campo oculto para armazenar o ID do veículo -->
-                    <input type="hidden" id="manutencaoVeiculoId"> 
-
+                    <input type="hidden" id="manutencaoVeiculoId">
                     <label for="manutencaoData">Data e Hora:</label>
-                    <!-- Campo para o Flatpickr -->
                     <input type="text" id="manutencaoData" placeholder="Selecione a data..." required>
-                    
                     <label for="manutencaoTipo">Tipo de Serviço:</label>
                     <input type="text" id="manutencaoTipo" placeholder="Ex: Troca de óleo, Revisão" required>
-                    
                     <label for="manutencaoCusto">Custo (R$):</label>
                     <input type="number" id="manutencaoCusto" step="0.01" min="0" placeholder="Ex: 150.50" required>
-                    
-                    <label for="manutencaoQuilometragem">Quilometragem (Opcional):</label>
-                    <input type="number" id="manutencaoQuilometragem" min="0" placeholder="Ex: 50000">
-
-                    <label for="manutencaoDescricao">Descrição/Observações (Opcional):</label>
+                    <label for="manutencaoDescricao">Descrição (Opcional):</label>
                     <textarea id="manutencaoDescricao" placeholder="Detalhes do serviço..."></textarea>
-                    
                     <button type="submit"><i class="fas fa-save"></i> Salvar Manutenção</button>
                 </form>
             </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/pt.js"></script>
     <script src="script.js"></script>
