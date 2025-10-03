@@ -8,11 +8,17 @@ import mongoose from 'mongoose';
 import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
 dotenv.config();
+import jwt from 'jsonwebtoken';
+import User from './models/User.js';
+import authMiddleware from './middleware/auth.js';
 
 const app = express();
+
 const port = process.env.PORT || 3001; // A porta correta é definida aqui
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+const JWT_SECRET = process.env.JWT_SECRET || 'SEU_SEGREDO_SUPER_SECRETO';
 
 app.use(cors());
 app.use(express.json());
@@ -186,6 +192,87 @@ app.get('/api/dicas-manutencao/:tipo', (req, res) => {
         res.status(500).json({ error: "Erro interno do servidor." });
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+// Registro
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
+        }
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Este e-mail já está em uso.' });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = new User({ email, password: hashedPassword });
+        await user.save();
+        res.status(201).json({ message: 'Usuário registrado com sucesso!' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao registrar usuário.' });
+    }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ error: 'Credenciais inválidas.' });
+        }
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ error: 'Credenciais inválidas.' });
+        }
+
+        // >>> AQUI A CONSTANTE JWT_SECRET É USADA <<<
+        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
+        
+        res.json({ token });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao fazer login.' });
+    }
+});
+
+
+// --- ROTAS DE VEÍCULOS (PROTEGIDAS) ---
+// Note o `authMiddleware` antes de cada controlador de rota
+app.get('/api/garagem/veiculos', authMiddleware, async (req, res) => {
+    const veiculos = await Veiculo.find({ owner: req.userId });
+    res.json(veiculos);
+});
+
+app.post('/api/garagem/veiculos', authMiddleware, async (req, res) => {
+    const dadosVeiculo = { ...req.body, owner: req.userId };
+    const novoVeiculo = new Veiculo(dadosVeiculo);
+    await novoVeiculo.save();
+    res.status(201).json(novoVeiculo);
+});
+
+// ... (rotas PUT e DELETE também usam authMiddleware) ...
+app.delete('/api/garagem/veiculos/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const veiculo = await Veiculo.findOne({ _id: id, owner: req.userId });
+    if (!veiculo) {
+        return res.status(404).json({ error: "Veículo não encontrado ou não pertence a você." });
+    }
+    await Veiculo.findByIdAndDelete(id);
+    res.json({ message: "Veículo deletado com sucesso!" });
+});
+
+
+
 
 // **A LINHA ABAIXO FOI A CORRIGIDA**
 app.listen(port, () => console.log(`Servidor rodando na porta ${port}.`));

@@ -1,4 +1,14 @@
 
+// Adicione estas linhas no topo do seu script.js
+const backendUrl = "https://garage-2dux.onrender.com"; // Mantenha a sua URL correta
+
+// --- ELEMENTOS DO DOM PARA AUTENTICAÇÃO ---
+const authContainer = document.getElementById('auth-container');
+const garageContainer = document.getElementById('garage-container');
+const loginView = document.getElementById('login-view');
+const registerView = document.getElementById('register-view');
+
+let garagem = []; // Mantenha sua variável global da garagem
 
 
 
@@ -309,7 +319,7 @@ class Caminhao extends Veiculo {
 }
 
 // --- Gerenciamento da Garagem e LocalStorage ---
-let garagem = [];
+//let garagem = [];
 const STORAGE_KEY = 'minhaGaragemInteligente_v2';
 
 function salvarGaragem() {
@@ -323,24 +333,22 @@ function salvarGaragem() {
 }
 
 // --- NOVO CÓDIGO para a função carregarGaragem ---
+// Substitua sua função carregarGaragem por esta:
 async function carregarGaragem() {
     const listaVeiculosDiv = document.getElementById('listaVeiculos');
     try {
-        const response = await fetch(`${backendUrl}/api/garagem/veiculos`);
+        // AGORA USA fetchAuth
+        const response = await fetchAuth(`${backendUrl}/api/garagem/veiculos`);
         if (!response.ok) {
-            throw new Error('Não foi possível carregar os veículos do servidor.');
+            throw new Error('Não foi possível carregar os veículos.');
         }
-        const veiculosDoBackend = await response.json();
-        // A variável 'garagem' agora será um cache dos dados do backend
-        garagem = veiculosDoBackend; 
+        
+        garagem = await response.json();
         renderizarGaragem();
-        // A função de agendamentos futuros precisará ser adaptada depois, se necessário
-        // renderizarAgendamentosFuturos(); 
     } catch (error) {
-        console.error("Erro ao carregar garagem:", error);
-        exibirNotificacao(error.message, 'error');
-        if (listaVeiculosDiv) {
-            listaVeiculosDiv.innerHTML = `<p class="error">Falha ao carregar veículos. Verifique a conexão com o servidor.</p>`;
+        if (error.message !== 'Não autorizado') {
+            console.error("Erro ao carregar garagem:", error.message);
+            exibirNotificacao(error.message, 'error');
         }
     }
 }
@@ -789,7 +797,7 @@ async function buscarEExibirDetalhesAPI(veiculoId) {
 
 // *** PASSO 1: DEFINA A URL BASE DO SEU BACKEND AQUI EM CIMA ***
 // Use a URL do Render quando o backend estiver na nuvem.
-const backendUrl = "https://garage-2dux.onrender.com";
+//const backendUrl = "https://garage-2dux.onrender.com";
 //const backendUrl = "http://localhost:3001";
 
 
@@ -1097,7 +1105,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // == INÍCIO SEÇÃO DA API - VERSÃO FINAL REVISADA =======================================
 // ======================================================================================
 
-const backendUrl = "https://garage-2dux.onrender.com"; // VERIFIQUE ESTA URL!
+//const backendUrl = "https://garage-2dux.onrender.com"; // VERIFIQUE ESTA URL!
 
 /**
  * Função auxiliar para tratar erros de fetch, fornecendo mais detalhes no console.
@@ -1212,4 +1220,134 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 })
+
+
+
+
+
+// --- INÍCIO: LÓGICA DE AUTENTICAÇÃO E CONTROLE DE VISUALIZAÇÃO ---
+
+// Alterna para a tela de registro
+document.getElementById('showRegister').addEventListener('click', (e) => {
+    e.preventDefault();
+    loginView.style.display = 'none';
+    registerView.style.display = 'block';
+});
+
+// Alterna para a tela de login
+document.getElementById('showLogin').addEventListener('click', (e) => {
+    e.preventDefault();
+    registerView.style.display = 'none';
+    loginView.style.display = 'block';
+});
+
+// Manipula o envio do formulário de registro
+document.getElementById('formRegister').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('registerEmail').value;
+    const password = document.getElementById('registerPassword').value;
+
+    try {
+        const response = await fetch(`${backendUrl}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Falha no registro');
+        
+        exibirNotificacao(data.message, 'success');
+        document.getElementById('showLogin').click(); // Leva o usuário para a tela de login
+    } catch (error) {
+        exibirNotificacao(error.message, 'error');
+    }
+});
+
+// Manipula o envio do formulário de login
+document.getElementById('formLogin').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value;
+    const password = document.getElementById('loginPassword').value;
+
+    try {
+        const response = await fetch(`${backendUrl}/api/auth/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Falha no login');
+        
+        localStorage.setItem('token', data.token); // Salva o token no localStorage
+        showGarageView(); // Mostra a tela da garagem
+    } catch (error) {
+        exibirNotificacao(error.message, 'error');
+    }
+});
+
+// Manipula o botão de logout
+document.getElementById('logoutButton').addEventListener('click', () => {
+    localStorage.removeItem('token');
+    showAuthView();
+    exibirNotificacao('Você saiu da sua conta.', 'info');
+});
+
+// Função para verificar se o usuário está logado
+function checkAuthState() {
+    const token = localStorage.getItem('token');
+    if (token) {
+        showGarageView();
+    } else {
+        showAuthView();
+    }
+}
+
+// Mostra a tela de autenticação e esconde a garagem
+function showAuthView() {
+    authContainer.style.display = 'block';
+    garageContainer.style.display = 'none';
+}
+
+// Mostra a garagem e esconde a tela de autenticação
+function showGarageView() {
+    authContainer.style.display = 'none';
+    garageContainer.style.display = 'block';
+    carregarGaragem(); // Carrega os veículos do usuário logado
+}
+
+// --- FIM: LÓGICA DE AUTENTICAÇÃO ---
+
+// Adicione esta nova função auxiliar
+async function fetchAuth(url, options = {}) {
+    const token = localStorage.getItem('token');
+    
+    // Configura os cabeçalhos padrão
+    const headers = {
+        'Content-Type': 'application/json',
+        ...options.headers,
+    };
+
+    // Adiciona o token de autorização se ele existir
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, { ...options, headers });
+
+    // Se o token for inválido ou expirar, o servidor retornará 401.
+    // Neste caso, deslogamos o usuário automaticamente.
+    if (response.status === 401) {
+        localStorage.removeItem('token');
+        showAuthView();
+        exibirNotificacao('Sua sessão expirou. Faça login novamente.', 'warning');
+        throw new Error('Não autorizado'); // Interrompe a execução da função original
+    }
+
+    return response;
+}
+
+
+
+
+
 
