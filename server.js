@@ -1,24 +1,28 @@
-/// server.js - VERSÃO FINAL (CORRIGIDA)
+// =================== server.js (CORRIGIDO) ===================
 
 import express from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import mongoose from 'mongoose';
-import path, { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import bcrypt from 'bcryptjs'; // Importe o bcrypt
+import jwt from 'jsonwebtoken';
+import User from './models/User.js'; // Verifique se o caminho para o model User está correto
+//import Veiculo from './models/Veiculo.js'; // Verifique se o caminho para o model Veiculo está correto
+import authMiddleware from './middleware/auth.js'; // Verifique se o caminho para o middleware está correto
+
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 3001; // A porta correta é definida aqui
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-app.use(cors());
-app.use(express.json());
-app.use(express.static(path.join(__dirname)));
+const port = process.env.PORT || 3001;
+const JWT_SECRET = process.env.JWT_SECRET || 'SEU_SEGREDO_SUPER_SECRETO';
 const MONGO_URI = process.env.MONGO_URI;
 
+// --- Middlewares Essenciais ---
+app.use(cors());
+app.use(express.json());
+
+// --- Conexão com o MongoDB ---
 if (!MONGO_URI) {
     console.error("ERRO FATAL: A variável de ambiente MONGO_URI não está definida!");
     process.exit(1);
@@ -31,35 +35,61 @@ mongoose.connect(MONGO_URI)
         process.exit(1);
     });
 
-const manutencaoSchema = new mongoose.Schema({
-    data: { type: Date, required: true },
-    tipo: { type: String, required: true, trim: true },
-    custo: { type: Number, required: true, min: 0 },
-    descricao: { type: String, trim: true }
+// ===================================
+// == ROTAS DE AUTENTICAÇÃO (PÚBLICAS)
+// ===================================
+
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
+        }
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Este e-mail já está em uso.' });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = new User({ email, password: hashedPassword });
+        await user.save();
+        res.status(201).json({ message: 'Usuário registrado com sucesso!' });
+    } catch (error) {
+        console.error("Erro no registro:", error);
+        res.status(500).json({ error: 'Erro interno ao registrar usuário.' });
+    }
 });
 
-const veiculoSchema = new mongoose.Schema({
-    modelo: { type: String, required: true, trim: true },
-    cor: { type: String, required: true, trim: true },
-    tipoVeiculo: { type: String, required: true, enum: ['Carro', 'CarroEsportivo', 'Caminhao'] },
-    ligado: { type: Boolean, default: false },
-    velocidade: { type: Number, default: 0 },
-    turbo: { type: Boolean, default: false },
-    capacidadeCarga: { type: Number, default: 0 },
-    cargaAtual: { type: Number, default: 0 },
-    historicoManutencao: [manutencaoSchema]
-}, { timestamps: true });
-
-const Veiculo = mongoose.model('Veiculo', veiculoSchema);
-
-// --- ROTAS DA API ---
-
-app.get('/', (req, res) => res.send('Servidor Backend da Garagem Inteligente está funcionando e conectado ao MongoDB!'));
-
-// READ: Buscar todos os veículos
-app.get('/api/garagem/veiculos', async (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
     try {
-        const veiculos = await Veiculo.find().sort({ modelo: 1 });
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(401).json({ error: 'Credenciais inválidas.' }); // Use 401 para falha de autenticação
+        }
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ error: 'Credenciais inválidas.' }); // Use 401
+        }
+
+        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
+        res.json({ token });
+    } catch (error) {
+        console.error("Erro no login:", error);
+        res.status(500).json({ error: 'Erro interno ao fazer login.' });
+    }
+});
+
+// ===========================================
+// == ROTAS DA GARAGEM (PROTEGIDAS)
+// ===========================================
+
+// Adicionamos o `authMiddleware` em todas as rotas que precisam de login.
+// O middleware adiciona `req.userId` a partir do token.
+
+// READ: Buscar todos os veículos DO USUÁRIO LOGADO
+app.get('/api/garagem/veiculos', authMiddleware, async (req, res) => {
+    try {
+        const veiculos = await Veiculo.find({ owner: req.userId }).sort({ modelo: 1 });
         res.json(veiculos);
     } catch (error) {
         console.error("Erro ao buscar veículos:", error);
@@ -67,10 +97,10 @@ app.get('/api/garagem/veiculos', async (req, res) => {
     }
 });
 
-// CREATE: Adicionar um novo veículo
-app.post('/api/garagem/veiculos', async (req, res) => {
+// CREATE: Adicionar um novo veículo PARA O USUÁRIO LOGADO
+app.post('/api/garagem/veiculos', authMiddleware, async (req, res) => {
     try {
-        const dadosVeiculo = req.body;
+        const dadosVeiculo = { ...req.body, owner: req.userId }; // Adiciona o ID do dono
         if (!dadosVeiculo.modelo || !dadosVeiculo.cor || !dadosVeiculo.tipoVeiculo) {
             return res.status(400).json({ error: "Modelo, cor e tipo de veículo são obrigatórios." });
         }
@@ -84,44 +114,43 @@ app.post('/api/garagem/veiculos', async (req, res) => {
 });
 
 // UPDATE: Atualizar um veículo por ID
-app.put('/api/garagem/veiculos/:id', async (req, res) => {
+app.put('/api/garagem/veiculos/:id', authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
-        const dadosAtualizados = req.body;
-
-        const veiculoAtualizado = await Veiculo.findByIdAndUpdate(
-            id,
-            dadosAtualizados,
+        const veiculo = await Veiculo.findOneAndUpdate(
+            { _id: id, owner: req.userId }, // Garante que o usuário só pode editar seu próprio veículo
+            req.body,
             { new: true, runValidators: true }
         );
-
-        if (!veiculoAtualizado) {
-            return res.status(404).json({ error: "Veículo não encontrado para atualização." });
+        if (!veiculo) {
+            return res.status(404).json({ error: "Veículo não encontrado ou você не tem permissão para editá-lo." });
         }
-
-        res.json(veiculoAtualizado);
+        res.json(veiculo);
     } catch (error) {
         console.error("Erro ao atualizar veículo:", error);
         res.status(500).json({ error: "Erro interno do servidor ao atualizar veículo." });
     }
 });
 
+
 // DELETE: Deletar um veículo por ID
-app.delete('/api/garagem/veiculos/:id', async (req, res) => {
+app.delete('/api/garagem/veiculos/:id', authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
-        const veiculoDeletado = await Veiculo.findByIdAndDelete(id);
+        const veiculo = await Veiculo.findOneAndDelete({ _id: id, owner: req.userId }); // Garante que o usuário só pode deletar seu próprio veículo
 
-        if (!veiculoDeletado) {
-            return res.status(404).json({ error: "Veículo não encontrado." });
+        if (!veiculo) {
+            return res.status(404).json({ error: "Veículo não encontrado ou você não tem permissão para removê-lo." });
         }
-
         res.json({ message: "Veículo deletado com sucesso!" });
     } catch (error) {
         console.error("Erro ao deletar veículo:", error);
         res.status(500).json({ error: "Erro interno do servidor ao deletar veículo." });
     }
 });
+
+    
+
 
 // Rota Proxy para API de Previsão do Tempo
 app.get('/api/previsao/:cidade', async (req, res) => {
@@ -186,6 +215,87 @@ app.get('/api/dicas-manutencao/:tipo', (req, res) => {
         res.status(500).json({ error: "Erro interno do servidor." });
     }
 });
+
+
+
+
+
+
+
+
+
+
+
+// Registro
+app.post('/api/auth/register', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
+        }
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ error: 'Este e-mail já está em uso.' });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const user = new User({ email, password: hashedPassword });
+        await user.save();
+        res.status(201).json({ message: 'Usuário registrado com sucesso!' });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao registrar usuário.' });
+    }
+});
+
+// Login
+app.post('/api/auth/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(400).json({ error: 'Credenciais inválidas.' });
+        }
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(400).json({ error: 'Credenciais inválidas.' });
+        }
+
+        // >>> AQUI A CONSTANTE JWT_SECRET É USADA <<<
+        const token = jwt.sign({ userId: user._id }, JWT_SECRET, { expiresIn: '1h' });
+        
+        res.json({ token });
+    } catch (error) {
+        res.status(500).json({ error: 'Erro ao fazer login.' });
+    }
+});
+
+
+// --- ROTAS DE VEÍCULOS (PROTEGIDAS) ---
+// Note o `authMiddleware` antes de cada controlador de rota
+app.get('/api/garagem/veiculos', authMiddleware, async (req, res) => {
+    const veiculos = await Veiculo.find({ owner: req.userId });
+    res.json(veiculos);
+});
+
+app.post('/api/garagem/veiculos', authMiddleware, async (req, res) => {
+    const dadosVeiculo = { ...req.body, owner: req.userId };
+    const novoVeiculo = new Veiculo(dadosVeiculo);
+    await novoVeiculo.save();
+    res.status(201).json(novoVeiculo);
+});
+
+// ... (rotas PUT e DELETE também usam authMiddleware) ...
+app.delete('/api/garagem/veiculos/:id', authMiddleware, async (req, res) => {
+    const { id } = req.params;
+    const veiculo = await Veiculo.findOne({ _id: id, owner: req.userId });
+    if (!veiculo) {
+        return res.status(404).json({ error: "Veículo não encontrado ou não pertence a você." });
+    }
+    await Veiculo.findByIdAndDelete(id);
+    res.json({ message: "Veículo deletado com sucesso!" });
+});
+
+
+
 
 // **A LINHA ABAIXO FOI A CORRIGIDA**
 app.listen(port, () => console.log(`Servidor rodando na porta ${port}.`));

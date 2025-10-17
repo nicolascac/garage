@@ -855,8 +855,136 @@ section {
     margin-top: -60px; /* Puxa a seção para cima para o link de âncora funcionar corretamente */
 }
 
-/* ... (resto do seu CSS) ... */
+/* ====================================================== */
+/* ==         ESTILOS PARA A POP-UP DE NOTIFICAÇÃO     == */
+/* ====================================================== */
+.notificacao-popup {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    min-width: 280px;
+    max-width: 400px;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 5px;
+    z-index: 1050;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    opacity: 0;
+    transform: translateX(100%);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    font-size: 0.95em;
+}
+
+.notificacao-popup.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notificacao-popup.success { background-color: #2ecc71; }
+.notificacao-popup.error   { background-color: #e74c3c; }
+.notificacao-popup.warning { background-color: #f39c12; }
+.notificacao-popup.info    { background-color: #3498db; }
 
 /* ====================================================== */
-/* == FIM: ESTILOS ARSENAL DE DADOS ===================== */
+/* ==          ESTILOS DA ÁREA DE AUTENTICAÇÃO         == */
 /* ====================================================== */
+
+/* Wrapper principal que centraliza o card na tela */
+.auth-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+/* O card que contém os formulários */
+.auth-card {
+    background-color: #ffffff;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 420px;
+    box-sizing: border-box;
+}
+
+/* Título e subtítulo dos formulários */
+.auth-title {
+    margin: 0 0 10px 0;
+    font-size: 26px;
+    font-weight: 700;
+    color: #2c3e50;
+    text-align: center;
+}
+
+.auth-subtitle {
+    margin: 0 0 35px 0;
+    font-size: 16px;
+    color: #7f8c8d;
+    text-align: center;
+}
+
+/* Grupo de Label + Input */
+.form-group {
+    margin-bottom: 22px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    color: #34495e;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #bdc3c7;
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Efeito de foco para melhor feedback ao usuário */
+.form-group input:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+/* Botão principal */
+.btn.btn-primary {
+    width: 100%;
+    padding: 14px 15px;
+    background-color: #3498db;
+    font-size: 16px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn.btn-primary:hover {
+    background-color: #2980b9;
+}
+
+/* Texto e link para alternar entre Login e Registro */
+.auth-toggle-text {
+    text-align: center;
+    margin-top: 25px;
+    font-size: 15px;
+    color: #7f8c8d;
+}
+
+.toggle-link {
+    color: #3498db;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.toggle-link:hover {
+    text-decoration: underline;
+}
