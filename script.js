@@ -649,7 +649,7 @@ if (formManutencaoElEvt) {
                 const fpInstance = dataInput._flatpickr; if (fpInstance) fpInstance.close();
                 if (typeof verificarAgendamentosProximos === 'function') verificarAgendamentosProximos();
             }
-        } catch (error) { console.error("Erro no form manutenção:", error); exibirNotificacao(`Erro: ${error.message}`, 'error'); }
+        } catch (error) { console.error("Erro no form manutenção:", error); exibirNotificacao(`script.js 652 Erro: ${error.message}`, 'error'); }
     });
 }
 

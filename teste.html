@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -11,73 +12,64 @@
 
     <div id="notificacoes"></div>
 
-    <!-- ====================================================== -->
-<!-- ==     NOVA SEÇÃO DE AUTENTICAÇÃO (LOGIN/REGISTRO)  == -->
-<!-- ====================================================== -->
-<main class="auth-wrapper" id="auth-container">
-    <div class="auth-card">
-
-        <!-- ===== TELA DE LOGIN (INICIALMENTE VISÍVEL) ===== -->
-        <div class="auth-view" id="login-view">
-            <form id="formLogin" novalidate>
-                <h2 class="auth-title">Bem-vindo de Volta!</h2>
-                <p class="auth-subtitle">Acesse sua garagem inteligente.</p>
-
-                <div class="form-group">
-                    <label for="loginEmail">E-mail</label>
-                    <input type="email" id="loginEmail" placeholder="seu@email.com" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="loginPassword">Senha</label>
-                    <input type="password" id="loginPassword" placeholder="Sua senha" required>
-                </div>
-
-                <button type="submit" class="btn btn-primary">Entrar</button>
-            </form>
-            <p class="auth-toggle-text">
-                Não tem uma conta? <a href="#" id="showRegister" class="toggle-link">Crie uma agora</a>
-            </p>
+    <!-- Container de Autenticação (sem alterações) -->
+    <main class="auth-wrapper" id="auth-container">
+        <div class="auth-card">
+            <div class="auth-view" id="login-view">
+                <form id="formLogin" novalidate>
+                    <h2 class="auth-title">Bem-vindo de Volta!</h2>
+                    <p class="auth-subtitle">Acesse sua garagem inteligente.</p>
+                    <div class="form-group">
+                        <label for="loginEmail">E-mail</label>
+                        <input type="email" id="loginEmail" placeholder="seu@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Senha</label>
+                        <input type="password" id="loginPassword" placeholder="Sua senha" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Entrar</button>
+                </form>
+                <p class="auth-toggle-text">
+                    Não tem uma conta? <a href="#" id="showRegister" class="toggle-link">Crie uma agora</a>
+                </p>
+            </div>
+            <div class="auth-view" id="register-view" style="display: none;">
+                 <form id="formRegister" novalidate>
+                    <h2 class="auth-title">Crie Sua Conta</h2>
+                    <p class="auth-subtitle">É rápido, fácil e gratuito.</p>
+                    <div class="form-group">
+                        <label for="registerEmail">E-mail</label>
+                        <input type="email" id="registerEmail" placeholder="seu@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Senha</label>
+                        <input type="password" id="registerPassword" placeholder="Crie uma senha forte (mín. 6 caracteres)" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Registrar</button>
+                </form>
+                <p class="auth-toggle-text">
+                    Já tem uma conta? <a href="#" id="showLogin" class="toggle-link">Faça o login</a>
+                </p>
+            </div>
         </div>
+    </main>
 
-        <!-- ===== TELA DE REGISTRO (INICIALMENTE OCULTA) ===== -->
-        <div class="auth-view" id="register-view" style="display: none;">
-             <form id="formRegister" novalidate>
-                <h2 class="auth-title">Crie Sua Conta</h2>
-                <p class="auth-subtitle">É rápido, fácil e gratuito.</p>
-
-                <div class="form-group">
-                    <label for="registerEmail">E-mail</label>
-                    <input type="email" id="registerEmail" placeholder="seu@email.com" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="registerPassword">Senha</label>
-                    <input type="password" id="registerPassword" placeholder="Crie uma senha forte" required>
-                </div>
-
-                <button type="submit" class="btn btn-primary">Registrar</button>
-            </form>
-            <p class="auth-toggle-text">
-                Já tem uma conta? <a href="#" id="showLogin" class="toggle-link">Faça o login</a>
-            </p>
-        </div>
-
-    </div>
-</main>
-
-    <!-- Conteúdo Principal da Garagem (Inicialmente oculto) -->
+    <!-- Conteúdo Principal da Garagem -->
     <div id="garage-container" style="display: none;">
         <header>
             <h1><i class="fas fa-warehouse"></i> Minha Garagem Inteligente</h1>
             <nav class="main-nav">
                 <a href="#secao-garagem"><i class="fas fa-car"></i> Minha Garagem</a>
                 <a href="#secao-adicionar-veiculo"><i class="fas fa-plus-circle"></i> Adicionar Veículo</a>
+                <!-- NOVO: Links de navegação para as seções adicionadas -->
+                <a href="#secao-planejador-viagem"><i class="fas fa-map-marked-alt"></i> Planejar Viagem</a>
+                <a href="#secao-dicas"><i class="fas fa-tools"></i> Dicas</a>
                 <a href="#" id="logoutButton"><i class="fas fa-sign-out-alt"></i> Sair</a>
             </nav>
         </header>
 
         <main>
+            <!-- Seção de Adicionar Veículo (sem alterações) -->
             <section id="secao-adicionar-veiculo" class="form-section">
                 <h2><i class="fas fa-plus-circle"></i> Adicionar Novo Veículo</h2>
                 <form id="formAdicionarVeiculo">
@@ -100,38 +92,56 @@
                 </form>
             </section>
 
+            <!-- Seção da Garagem (sem alterações) -->
             <section id="secao-garagem" class="list-section">
                 <h2><i class="fas fa-car"></i> Meus Veículos</h2>
                 <div id="listaVeiculos"><p class="loading"><i class="fas fa-spinner fa-spin"></i> Carregando veículos...</p></div>
             </section>
+
+            <!-- ====================================================== -->
+            <!-- ==     NOVO: SEÇÃO DO PLANEJADOR DE VIAGEM          == -->
+            <!-- ====================================================== -->
+            <section id="secao-planejador-viagem" class="form-section">
+                <h2><i class="fas fa-map-marked-alt"></i> Planejar Viagem com Clima</h2>
+                <div class="form-group">
+                    <label for="destino-viagem">Cidade de Destino:</label>
+                    <input type="text" id="destino-viagem" placeholder="Ex: Rio de Janeiro">
+                </div>
+                <button id="verificar-clima-btn"><i class="fas fa-cloud-sun"></i> Verificar Clima</button>
+                <div id="previsao-tempo-resultado" style="display: none;"></div>
+            </section>
+
+            <!-- ====================================================== -->
+            <!-- ==     NOVO: SEÇÃO DE DICAS DE MANUTENÇÃO           == -->
+            <!-- ====================================================== -->
+            <section id="secao-dicas" class="list-section">
+                <h2><i class="fas fa-tools"></i> Dicas de Manutenção da API</h2>
+                <button id="buscar-dicas-gerais-btn">Buscar Dicas Gerais</button>
+                <div id="dicas-gerais-resultado" class="dicas-container" style="display: none;"></div>
+                <hr>
+                <div class="form-group">
+                    <label for="tipo-veiculo-dica-input">Buscar dica por tipo:</label>
+                    <input type="text" id="tipo-veiculo-dica-input" placeholder="Ex: Caminhao, CarroEsportivo">
+                </div>
+                <button id="buscar-dicas-especificas-btn">Buscar Dica Específica</button>
+                <div id="dicas-especificas-resultado" class="dicas-container" style="display: none;"></div>
+            </section>
+
         </main>
     </div>
 
-    <!-- O Modal de Detalhes permanece o mesmo -->
+    <!-- ====================================================== -->
+    <!-- ==     MODAL SIMPLIFICADO                           == -->
+    <!-- ====================================================== -->
     <div id="modalDetalhesVeiculo" class="modal">
+        <!-- O conteúdo será injetado aqui pelo UIManager.js -->
         <div class="modal-content">
-             <!-- O conteúdo do modal permanece o mesmo do seu arquivo original -->
-             <span class="close-button" onclick="fecharModal()">×</span>
-            <h2 id="modalTituloVeiculo">Editar Veículo</h2>
-            <div class="form-section">
-                <form id="formEditarVeiculo">
-                    <label for="editModeloVeiculo">Modelo:</label>
-                    <input type="text" id="editModeloVeiculo" value="" required>
-                    
-                    <label for="editCorVeiculo">Cor:</label>
-                    <input type="text" id="editCorVeiculo" value="" required>
-                    
-                    <div id="editCampoCapacidadeCarga" style="display:none;">
-                        <label for="editCapacidadeCargaVeiculo">Capacidade de Carga (kg):</label>
-                        <input type="number" id="editCapacidadeCargaVeiculo" value="0" min="0">
-                    </div>
-
-                    <button type="submit"><i class="fas fa-save"></i> Salvar Alterações</button>
-                </form>
-            </div>
+            <!-- Exemplo:
+                <span class="close-button">&times;</span>
+                <h2 id="modalTituloVeiculo">Carregando...</h2>
+            -->
         </div>
     </div>
-    
     
     <script type="module" src="main.js"></script>
 </body>

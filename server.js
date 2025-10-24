@@ -8,7 +8,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs'; // Importe o bcrypt
 import jwt from 'jsonwebtoken';
 import User from './models/User.js'; // Verifique se o caminho para o model User está correto
-//import Veiculo from './models/Veiculo.js'; // Verifique se o caminho para o model Veiculo está correto
+import Veiculo from './models/Veiculo.js'; // Verifique se o caminho para o model Veiculo está correto
 import authMiddleware from './middleware/auth.js'; // Verifique se o caminho para o middleware está correto
 
 dotenv.config();
@@ -83,74 +83,51 @@ app.post('/api/auth/login', async (req, res) => {
 // == ROTAS DA GARAGEM (PROTEGIDAS)
 // ===========================================
 
-// Adicionamos o `authMiddleware` em todas as rotas que precisam de login.
-// O middleware adiciona `req.userId` a partir do token.
-
-// READ: Buscar todos os veículos DO USUÁRIO LOGADO
+// READ: Buscar todos os veículos do usuário logado
 app.get('/api/garagem/veiculos', authMiddleware, async (req, res) => {
     try {
-        const veiculos = await Veiculo.find({ owner: req.userId }).sort({ modelo: 1 });
+        // MODIFICADO: Adicionado .populate() para buscar os emails dos usuários compartilhados
+        const veiculos = await Veiculo.find({ owner: req.userId })
+            .populate('sharedWith', 'email _id') // Popula o campo 'sharedWith' buscando apenas 'email' e '_id' da coleção de usuários
+            .sort({ modelo: 1 });
         res.json(veiculos);
     } catch (error) {
         console.error("Erro ao buscar veículos:", error);
-        res.status(500).json({ error: "Erro interno do servidor ao buscar veículos." });
+        res.status(500).json({ message: "Erro interno do servidor ao buscar veículos." });
     }
 });
 
-// CREATE: Adicionar um novo veículo PARA O USUÁRIO LOGADO
+// CREATE: Adicionar um novo veículo
 app.post('/api/garagem/veiculos', authMiddleware, async (req, res) => {
     try {
-        const dadosVeiculo = { ...req.body, owner: req.userId }; // Adiciona o ID do dono
+        const dadosVeiculo = { ...req.body, owner: req.userId };
         if (!dadosVeiculo.modelo || !dadosVeiculo.cor || !dadosVeiculo.tipoVeiculo) {
-            return res.status(400).json({ error: "Modelo, cor e tipo de veículo são obrigatórios." });
+            return res.status(400).json({ message: "Modelo, cor e tipo de veículo são obrigatórios." });
         }
         const novoVeiculo = new Veiculo(dadosVeiculo);
         await novoVeiculo.save();
         res.status(201).json(novoVeiculo);
     } catch (error) {
         console.error("Erro ao adicionar veículo:", error);
-        res.status(500).json({ error: "Erro interno do servidor ao adicionar veículo." });
+        res.status(500).json({ message: "Erro interno do servidor ao adicionar veículo." });
     }
 });
-
-// UPDATE: Atualizar um veículo por ID
-app.put('/api/garagem/veiculos/:id', authMiddleware, async (req, res) => {
-    try {
-        const { id } = req.params;
-        const veiculo = await Veiculo.findOneAndUpdate(
-            { _id: id, owner: req.userId }, // Garante que o usuário só pode editar seu próprio veículo
-            req.body,
-            { new: true, runValidators: true }
-        );
-        if (!veiculo) {
-            return res.status(404).json({ error: "Veículo não encontrado ou você не tem permissão para editá-lo." });
-        }
-        res.json(veiculo);
-    } catch (error) {
-        console.error("Erro ao atualizar veículo:", error);
-        res.status(500).json({ error: "Erro interno do servidor ao atualizar veículo." });
-    }
-});
-
 
 // DELETE: Deletar um veículo por ID
 app.delete('/api/garagem/veiculos/:id', authMiddleware, async (req, res) => {
     try {
         const { id } = req.params;
-        const veiculo = await Veiculo.findOneAndDelete({ _id: id, owner: req.userId }); // Garante que o usuário só pode deletar seu próprio veículo
+        const veiculo = await Veiculo.findOneAndDelete({ _id: id, owner: req.userId });
 
         if (!veiculo) {
-            return res.status(404).json({ error: "Veículo não encontrado ou você não tem permissão para removê-lo." });
+            return res.status(404).json({ message: "Veículo não encontrado ou você não tem permissão para removê-lo." });
         }
-        res.json({ message: "Veículo deletado com sucesso!" });
+        res.json({ message: `Veículo "${veiculo.modelo}" removido com sucesso!` });
     } catch (error) {
         console.error("Erro ao deletar veículo:", error);
-        res.status(500).json({ error: "Erro interno do servidor ao deletar veículo." });
+        res.status(500).json({ message: "Erro interno do servidor ao deletar veículo." });
     }
 });
-
-    
-
 
 // Rota Proxy para API de Previsão do Tempo
 app.get('/api/previsao/:cidade', async (req, res) => {
@@ -216,6 +193,28 @@ app.get('/api/dicas-manutencao/:tipo', (req, res) => {
     }
 });
 
+app.put('/api/garagem/veiculos/:id', authMiddleware, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const dadosAtualizados = req.body;
+
+        // Encontra o veículo e garante que o usuário logado é o proprietário
+        const veiculo = await Veiculo.findOneAndUpdate(
+            { _id: id, owner: req.userId },
+            dadosAtualizados,
+            { new: true, runValidators: true } // Opções: retorna o documento atualizado e roda as validações do Schema
+        );
+
+        if (!veiculo) {
+            return res.status(404).json({ error: "Veículo não encontrado ou você não tem permissão para editá-lo." });
+        }
+
+        res.json({ message: "Veículo atualizado com sucesso!", veiculo });
+    } catch (error) {
+        console.error("Erro ao atualizar veículo:", error);
+        res.status(500).json({ error: "Erro interno do servidor ao atualizar veículo." });
+    }
+});
 
 
 
@@ -292,6 +291,85 @@ app.delete('/api/garagem/veiculos/:id', authMiddleware, async (req, res) => {
     }
     await Veiculo.findByIdAndDelete(id);
     res.json({ message: "Veículo deletado com sucesso!" });
+});
+
+
+
+// Rota para COMPARTILHAR um veículo com outro usuário
+app.post('/api/veiculos/:veiculoId/share', authMiddleware, async (req, res) => {
+    try {
+        const { veiculoId } = req.params;
+        const { email } = req.body; // Recebe o email do usuário a ser adicionado
+
+        if (!email) {
+            return res.status(400).json({ message: 'O e-mail do usuário é obrigatório.' });
+        }
+
+        const veiculo = await Veiculo.findById(veiculoId);
+        if (!veiculo) {
+            return res.status(404).json({ message: 'Veículo não encontrado.' });
+        }
+
+        // Verifica se quem está compartilhando é o dono do veículo
+        if (veiculo.owner.toString() !== req.userId) {
+            return res.status(403).json({ message: 'Ação não permitida. Apenas o proprietário pode compartilhar.' });
+        }
+        
+        const userToShareWith = await User.findOne({ email });
+        if (!userToShareWith) {
+            return res.status(404).json({ message: `Usuário com e-mail "${email}" não encontrado.` });
+        }
+
+        // Não permite compartilhar com o próprio dono
+        if(userToShareWith._id.toString() === req.userId) {
+            return res.status(400).json({ message: 'Você não pode compartilhar um veículo com você mesmo.' });
+        }
+
+        // Usa $addToSet para evitar IDs duplicados no array
+        await Veiculo.updateOne(
+            { _id: veiculoId },
+            { $addToSet: { sharedWith: userToShareWith._id } }
+        );
+
+        res.json({ message: `Veículo compartilhado com ${email} com sucesso!` });
+    } catch (error) {
+        console.error("Erro ao compartilhar veículo:", error);
+        res.status(500).json({ message: 'Erro interno no servidor.' });
+    }
+});
+
+
+// Rota para REMOVER O COMPARTILHAMENTO de um veículo
+app.post('/api/veiculos/:veiculoId/unshare', authMiddleware, async (req, res) => {
+    try {
+        const { veiculoId } = req.params;
+        const { userIdToRemove } = req.body; // Recebe o ID do usuário a ser removido
+
+        if (!userIdToRemove) {
+            return res.status(400).json({ message: 'O ID do usuário a ser removido é obrigatório.' });
+        }
+
+        const veiculo = await Veiculo.findById(veiculoId);
+        if (!veiculo) {
+            return res.status(404).json({ message: 'Veículo não encontrado.' });
+        }
+
+        // Verifica se quem está removendo o acesso é o dono do veículo
+        if (veiculo.owner.toString() !== req.userId) {
+            return res.status(403).json({ message: 'Ação não permitida. Apenas o proprietário pode remover acessos.' });
+        }
+
+        // Ação Principal: Usa o operador $pull do Mongoose para remover o userIdToRemove do array sharedWith
+        await Veiculo.updateOne(
+            { _id: veiculoId },
+            { $pull: { sharedWith: userIdToRemove } }
+        );
+
+        res.json({ message: 'Acesso removido com sucesso!' });
+    } catch (error) {
+        console.error("Erro ao remover compartilhamento:", error);
+        res.status(500).json({ message: 'Erro interno no servidor.' });
+    }
 });
 
 

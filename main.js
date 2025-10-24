@@ -7,6 +7,54 @@ import { GarageManager } from './GarageManager.js';
 // esteja totalmente carregado antes de o script ser executado.
 document.addEventListener('DOMContentLoaded', () => {
 
+
+
+
+
+
+    const weatherButton = document.getElementById('verificar-clima-btn');
+    const cityInput = document.getElementById('destino-viagem');
+
+    if (weatherButton && cityInput) {
+        weatherButton.addEventListener('click', async () => {
+            const city = cityInput.value.trim();
+            if (!city) {
+                ui.showNotification('Por favor, digite uma cidade.', 'warning');
+                return;
+            }
+
+            ui.renderWeatherLoading(city); // 1. Mostra o feedback de "carregando"
+
+            try {
+                // 2. Chama a API através do ApiService
+                const forecastData = await api.getWeatherForecast(city);
+
+
+                try {
+
+                    // 3. Mostra o resultado na tela com o UIManager
+                    ui.renderWeatherSuccess(forecastData);
+                } catch (error1) {
+                    // 4. Em caso de falha, mostra o erro
+                    ui.renderWeatherError("renderWeather:" + error1.message);
+                }
+
+            } catch (error) {
+                // 4. Em caso de falha, mostra o erro
+                ui.renderWeatherError("getWeatherForecast:" + error.message);
+            }
+
+
+        });
+    }
+
+
+
+
+
+
+
+
     // -------------------------------------------
     // 1. CONFIGURAÇÃO E INSTANCIAÇÃO DOS MÓDULOS
     // -------------------------------------------
@@ -67,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
             authManager.handleLogin(email, password);
         });
     }
-    
+
     if (logoutButton) {
         logoutButton.addEventListener('click', () => {
             authManager.handleLogout();
@@ -120,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
+
     // Listener para a lista de veículos (usando delegação de eventos)
     // Isso permite que os botões de editar/remover funcionem mesmo para
     // veículos adicionados dinamicamente.
