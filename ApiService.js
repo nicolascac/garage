@@ -20,10 +20,10 @@ export class ApiService {
 
         const response = await fetch(`${this.baseUrl}${url}`, { ...options, headers });
 
-        if (response.status === 401) {
-            document.dispatchEvent(new CustomEvent('unauthorized'));
-            throw new Error('Sua sessão expirou. Por favor, faça login novamente.');
-        }
+       // if (response.status === 401) {
+           // document.dispatchEvent(new CustomEvent('unauthorized'));
+           // throw new Error('Sua sessão expirou. Por favor, faça login novamente.');//
+       // }
 
         if (!response.ok) {
             let errorMessage = `Erro ${response.status}: ${response.statusText}`;
@@ -116,6 +116,15 @@ export class ApiService {
     }
 
 
+
+
+     async getGeneralTips() {
+        return this._fetchAuth('/api/dicas-manutencao');
+    }
+
+    async getSpecificTips(vehicleType) {
+        return this._fetchAuth(`/api/dicas-manutencao/${encodeURIComponent(vehicleType)}`);
+    }
 
 
 }

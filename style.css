@@ -988,3 +988,31 @@ section {
 .toggle-link:hover {
     text-decoration: underline;
 }
+
+
+
+
+
+
+
+
+.vehicle-item {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Espaço entre imagem, texto e botões */
+}
+
+.vehicle-list-image {
+    width: 80px;
+    height: 60px;
+    object-fit: cover; /* Garante que a imagem não fique distorcida */
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    background-color: #f0f0f0; /* Cor de fundo caso a imagem falhe */
+}
+
+.vehicle-info {
+    flex-grow: 1; /* Faz o texto ocupar o espaço restante */
+    display: flex;
+    flex-direction: column;
+}

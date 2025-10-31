@@ -46,6 +46,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
         });
+
+
+
+
+
+
+
+        
+    const generalTipsBtn = document.getElementById('buscar-dicas-gerais-btn');
+    if (generalTipsBtn) {
+        generalTipsBtn.addEventListener('click', async () => {
+            ui.renderTipsLoading(ui.generalTipsDiv);
+            try {
+                const tips = await api.getGeneralTips();
+                ui.renderTipsSuccess(tips, ui.generalTipsDiv, "Dicas Gerais");
+            } catch (error) {
+                ui.renderTipsError(error.message, ui.generalTipsDiv);
+            }
+        });
+    }
+    
+    const specificTipsBtn = document.getElementById('buscar-dicas-especificas-btn');
+    const specificTipsInput = document.getElementById('tipo-veiculo-dica-input');
+    if (specificTipsBtn && specificTipsInput) {
+        specificTipsBtn.addEventListener('click', async () => {
+            const vehicleType = specificTipsInput.value.trim();
+            if (!vehicleType) {
+                ui.showNotification("Por favor, digite um tipo de veículo.", 'warning');
+                return;
+            }
+            ui.renderTipsLoading(ui.specificTipsDiv);
+            try {
+                const tips = await api.getSpecificTips(vehicleType);
+                ui.renderTipsSuccess(tips, ui.specificTipsDiv, `Dicas para ${vehicleType}`);
+            } catch (error) {
+                ui.renderTipsError(error.message, ui.specificTipsDiv);
+            }
+        });
+    }
     }
 
 
@@ -138,11 +177,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const tipo = tipoVeiculoSelect.value;
             const modelo = document.getElementById('modeloVeiculo').value;
             const cor = document.getElementById('corVeiculo').value;
+               const imagemUrl = document.getElementById('imagemUrlVeiculo').value;
 
             const vehicleData = {
                 tipoVeiculo: tipo,
                 modelo: modelo,
                 cor: cor,
+                 imagemUrl: imagemUrl, 
             };
 
             // Adiciona a capacidade de carga ao objeto de dados apenas se for um caminhão

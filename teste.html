@@ -84,6 +84,14 @@
                     <input type="text" id="modeloVeiculo" placeholder="Ex: Fusca, Ferrari, Scania" required>
                     <label for="corVeiculo">Cor:</label>
                     <input type="text" id="corVeiculo" placeholder="Ex: Azul, Vermelho, Prata" required>
+                      <div class="form-group">
+                        <label for="imagemUrlVeiculo">URL da Imagem (Opcional):</label>
+                        <input type="url" id="imagemUrlVeiculo" placeholder="Cole o link da imagem aqui (ex: https://site.com/carro.png)">
+                    </div>
+                    <!-- ^^^ ADICIONE ESTE BLOCO ^^^ -->
+
+                    <div id="campoCapacidadeCarga" style="display: none;">
+                        <!-- ... (o resto do seu formulário continua aqui) ... -->
                     <div id="campoCapacidadeCarga" style="display: none;">
                         <label for="capacidadeCargaVeiculo">Capacidade de Carga (kg):</label>
                         <input type="number" id="capacidadeCargaVeiculo" min="0" placeholder="Ex: 10000">
@@ -91,6 +99,8 @@
                     <button type="submit"><i class="fas fa-save"></i> Adicionar à Garagem</button>
                 </form>
             </section>
+
+
 
             <!-- Seção da Garagem (sem alterações) -->
             <section id="secao-garagem" class="list-section">
